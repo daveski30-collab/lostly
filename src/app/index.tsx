@@ -2,7 +2,7 @@ import * as Location from 'expo-location';
 import { Redirect, router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { Button, C, Card, F, SectionTitle } from '../components/ui';
+import { Bouncy, Button, C, Card, F, SectionTitle } from '../components/ui';
 import { isTestPlace } from '../lib/testlab';
 import { handleEnter, handleExit } from '../lib/engine';
 import { enableNudges, notify, nudgesEnabled, supportsBackgroundNudges, syncGeofences } from '../lib/platform';
@@ -131,7 +131,7 @@ export default function Home() {
       </View>
 
       {places.length > 0 && (
-        <Pressable onPress={checkNow} style={({ pressed }) => [st.leave, pressed && { transform: [{ scale: 0.98 }] }]} accessibilityRole="button" accessibilityLabel="Leaving now?">
+        <Bouncy onPress={checkNow} style={st.leave} scaleTo={0.97} accessibilityRole="button" accessibilityLabel="Leaving now?">
           <Text style={st.leaveTitle}>{busy === 'check' ? 'Finding you…' : 'Leaving\nnow?'}</Text>
           <View style={st.leaveFoot}>
             <Text style={st.leaveSub}>3-second check of your stuff</Text>
@@ -140,16 +140,16 @@ export default function Home() {
             </View>
           </View>
           <Text style={st.leaveEmoji}>🔑</Text>
-        </Pressable>
+        </Bouncy>
       )}
 
       {stats.checks > 0 ? (
         <View style={st.stats}>
-          <Stat big={`${stats.streakDays}`} icon="🔥" label={stats.streakDays === 1 ? 'day streak' : 'day streak'} />
+          <Stat big={stats.streakDays} color={C.accent} label={stats.streakDays === 1 ? 'day streak' : 'day streak'} />
           <View style={st.statDiv} />
-          <Stat big={`${stats.saves}`} icon="🛟" label={stats.saves === 1 ? 'thing saved' : 'things saved'} />
+          <Stat big={stats.saves} color={C.green} label={stats.saves === 1 ? 'thing saved' : 'things saved'} />
           <View style={st.statDiv} />
-          <Stat big={`${stats.checks}`} icon="✅" label="checks" />
+          <Stat big={stats.checks} color={C.ink} label="checks" />
         </View>
       ) : null}
 
@@ -288,12 +288,10 @@ export default function Home() {
   );
 }
 
-function Stat({ big, icon, label }: { big: string; icon: string; label: string }) {
+function Stat({ big, color, label }: { big: number; color: string; label: string }) {
   return (
     <View style={st.stat}>
-      <Text style={st.statBig}>
-        {big} <Text style={st.statIcon}>{icon}</Text>
-      </Text>
+      <Text style={[st.statBig, { color }]}>{big}</Text>
       <Text style={st.statLabel}>{label}</Text>
     </View>
   );
@@ -312,11 +310,10 @@ const st = StyleSheet.create({
   leaveGo: { backgroundColor: C.onAccent, borderRadius: 999, paddingVertical: 10, paddingHorizontal: 22 },
   leaveGoText: { color: C.accent, fontFamily: F.heavy, fontSize: 16 },
   leaveEmoji: { position: 'absolute', right: -6, top: -4, fontSize: 96, opacity: 0.9, transform: [{ rotate: '-18deg' }] },
-  stats: { flexDirection: 'row', backgroundColor: C.card, borderRadius: 24, paddingVertical: 14 },
+  stats: { flexDirection: 'row', backgroundColor: C.card, borderRadius: 24, paddingVertical: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
   stat: { flex: 1, alignItems: 'center' },
   statDiv: { width: 1, backgroundColor: C.line, marginVertical: 4 },
-  statBig: { fontSize: 26, fontFamily: F.heavy, color: C.ink },
-  statIcon: { fontSize: 18 },
+  statBig: { fontSize: 32, lineHeight: 36, fontFamily: F.heavy, letterSpacing: -1 },
   statLabel: { fontSize: 12, color: C.muted, marginTop: 2 },
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 4 },
   dot: { width: 8, height: 8, borderRadius: 4 },

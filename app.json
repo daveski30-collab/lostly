@@ -19,7 +19,7 @@
     "android": {
       "package": "com.lostly.app",
       "adaptiveIcon": {
-        "backgroundColor": "#15122E",
+        "backgroundColor": "#FFD84D",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -29,7 +29,12 @@
     "web": {
       "favicon": "./assets/favicon.png",
       "output": "single",
-      "bundler": "metro"
+      "bundler": "metro",
+      "name": "Lostly",
+      "shortName": "Lostly",
+      "themeColor": "#15122E",
+      "backgroundColor": "#15122E",
+      "description": "Never leave your stuff behind."
     },
     "plugins": [
       "expo-router",
@@ -43,7 +48,16 @@
         }
       ],
       "expo-notifications",
-      "expo-font"
-    ]
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 160,
+          "backgroundColor": "#15122E"
+        }
+      ]
+    ],
+    "backgroundColor": "#15122E"
   }
 }

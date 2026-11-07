@@ -1,9 +1,34 @@
 // Small building blocks reused across screens, plus the design tokens.
 // Look: midnight violet, one loud electric-yellow action, mint for "got it", coral for "left behind".
 
-import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native';
+import { useState, type ReactNode } from 'react';
+import { Animated, Platform, Pressable, StyleSheet, Text, View, type PressableProps, type StyleProp, type ViewStyle } from 'react-native';
+import { tick } from '../lib/haptics';
 import type { Weekday } from '../lib/types';
+
+const NATIVE = Platform.OS !== 'web';
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+/** A pressable that squishes under your thumb and springs back, with a tiny haptic tick. */
+export function Bouncy({ style, children, onPress, scaleTo = 0.95, haptic = true, ...rest }: Omit<PressableProps, 'style' | 'children'> & { style?: StyleProp<ViewStyle>; children: ReactNode; scaleTo?: number; haptic?: boolean }) {
+  const scale = useState(() => new Animated.Value(1))[0];
+  const to = (v: number) => Animated.spring(scale, { toValue: v, useNativeDriver: NATIVE, speed: 40, bounciness: v === 1 ? 12 : 0 }).start();
+  return (
+    <AnimatedPressable
+      {...rest}
+      onPressIn={() => to(scaleTo)}
+      onPressOut={() => to(1)}
+      onPress={(e) => {
+        if (haptic) tick();
+        onPress?.(e);
+      }}
+      style={[style, { transform: [{ scale }] }]}
+    >
+      {children}
+    </AnimatedPressable>
+  );
+}
 
 export const C = {
   bg: '#15122E',
@@ -45,14 +70,9 @@ export function Button({
   disabled?: boolean;
 }) {
   return (
-    <Pressable
-      onPress={onPress}
-      disabled={disabled}
-      accessibilityRole="button"
-      style={({ pressed }) => [s.btn, s[`btn_${kind}`], pressed && { transform: [{ scale: 0.97 }] }, disabled && { opacity: 0.45 }]}
-    >
+    <Bouncy onPress={onPress} disabled={disabled} accessibilityRole="button" accessibilityLabel={label} scaleTo={0.96} style={[s.btn, s[`btn_${kind}`], disabled && { opacity: 0.45 }]}>
       <Text style={[s.btnText, s[`btnText_${kind}`]]}>{label}</Text>
-    </Pressable>
+    </Bouncy>
   );
 }
 
@@ -114,17 +134,11 @@ export function Toggle({ label, value, onChange, hint }: { label: string; value:
 /** A tappable emoji tile used for picking items and places. */
 export function Chip({ emoji, label, on, onPress, sub }: { emoji: string; label: string; on: boolean; onPress: () => void; sub?: string }) {
   return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [s.chip, on && s.chipOn, pressed && { transform: [{ scale: 0.96 }] }]}
-      accessibilityRole="checkbox"
-      accessibilityState={{ checked: on }}
-      accessibilityLabel={label}
-    >
+    <Bouncy onPress={onPress} style={[s.chip, on && s.chipOn]} accessibilityRole="checkbox" accessibilityState={{ checked: on }} accessibilityLabel={label}>
       <Text style={s.chipEmoji}>{emoji}</Text>
       <Text style={[s.chipLabel, on && { color: C.accent }]} numberOfLines={1}>{label}</Text>
       {sub ? <Text style={s.chipSub} numberOfLines={2}>{sub}</Text> : null}
-    </Pressable>
+    </Bouncy>
   );
 }
 
@@ -133,7 +147,7 @@ export function SectionTitle({ children }: { children: ReactNode }) {
 }
 
 export const s = StyleSheet.create({
-  card: { backgroundColor: C.card, borderRadius: 24, padding: 16, gap: 10 },
+  card: { backgroundColor: C.card, borderRadius: 24, padding: 16, gap: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
   btn: { borderRadius: 999, paddingVertical: 15, paddingHorizontal: 20, alignItems: 'center' },
   btn_primary: { backgroundColor: C.accent },
   btn_secondary: { backgroundColor: C.accentSoft },
@@ -157,7 +171,7 @@ export const s = StyleSheet.create({
   dayText: { fontFamily: F.bold, color: C.ink },
   track: { width: 46, height: 28, borderRadius: 14, backgroundColor: C.card2, padding: 4 },
   knob: { width: 20, height: 20, borderRadius: 10, backgroundColor: C.muted },
-  chip: { width: '31%', flexGrow: 1, minWidth: 92, alignItems: 'center', paddingVertical: 14, paddingHorizontal: 6, borderRadius: 20, borderWidth: 2, borderColor: 'transparent', backgroundColor: C.card, gap: 3 },
+  chip: { flexBasis: '30%', flexGrow: 1, minWidth: 92, alignItems: 'center', paddingVertical: 14, paddingHorizontal: 6, borderRadius: 20, borderWidth: 2, borderColor: 'transparent', backgroundColor: C.card, gap: 3 },
   chipOn: { borderColor: C.accent, backgroundColor: C.accentSoft },
   chipEmoji: { fontSize: 30 },
   chipLabel: { fontSize: 14, fontFamily: F.bold, color: C.ink },

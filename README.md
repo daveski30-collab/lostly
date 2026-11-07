@@ -57,6 +57,10 @@ src/
   components/ui.tsx    buttons, steppers, day pickers
 ```
 
+## Testing
+
+See [TESTING.md](TESTING.md): a 2-minute browser walkthrough, the in-app Test lab, and how to put it on a real phone.
+
 ## Run it
 
 ```bash

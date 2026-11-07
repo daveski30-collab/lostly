@@ -114,10 +114,13 @@ export function nudgeMessage(place: Place, history: CheckRecord[], now: Date, we
   if (top?.oneTime) {
     return { title, body: `Don't forget: ${top.emoji} ${top.label} (just for today). Tap to check your stuff.` };
   }
-  const weatherItem = list.find((i) => i.when && weather);
-  if (weatherItem && weather) {
-    const why = weatherItem.when === 'rain' ? `${weather.rainChance}% chance of rain` : `only ${Math.round(weather.tempF)}°F out`;
-    return { title, body: `${why[0].toUpperCase()}${why.slice(1)}: grab your ${weatherItem.label.toLowerCase()} ${weatherItem.emoji}. Tap to check the rest.` };
+  const weatherItems = weather ? list.filter((i) => i.when) : [];
+  if (weatherItems.length && weather) {
+    const cold = weatherItems.some((i) => i.when === 'cold');
+    const rain = weatherItems.some((i) => i.when === 'rain');
+    const why = [cold && `${Math.round(weather.tempF)}°F`, rain && `${weather.rainChance}% chance of rain`].filter(Boolean).join(' and ');
+    const what = weatherItems.map((i) => `${i.label.toLowerCase()} ${i.emoji}`).join(' and ');
+    return { title, body: `${why}: grab your ${what}. Tap to check the rest.` };
   }
   if (top && top.misses >= 2) {
     return { title, body: `Heads up: you have left your ${top.label.toLowerCase()} here ${top.misses} times. Tap to check your stuff.` };

@@ -93,7 +93,7 @@ export default function EditPlace() {
       <Card>
         <View style={st.nameRow}>
           <TextInput style={[st.input, st.emojiInput]} value={place.emoji} onChangeText={(v) => set({ emoji: v })} maxLength={4} accessibilityLabel="Place emoji" />
-          <TextInput style={[st.input, { flex: 1 }]} value={place.name} onChangeText={(v) => set({ name: v })} placeholder="Name (Home, School, Gym…)" accessibilityLabel="Place name" />
+          <TextInput style={[st.input, { flex: 1 }]} value={place.name} onChangeText={(v) => set({ name: v })} placeholder="Name (Home, School, Gym…)" placeholderTextColor={C.muted} accessibilityLabel="Place name" />
         </View>
         <Button kind="secondary" label={place.location ? '📍 Update to where I am now' : '📍 Set to where I am now'} onPress={useHere} />
         {place.location ? (
@@ -136,7 +136,7 @@ export default function EditPlace() {
                       style={[st.pill, it.when === w && st.pillOn]}
                       onPress={() => set({ items: place.items.map((x) => (x.id === it.id ? { ...x, when: w } : x)) })}
                     >
-                      <Text style={[st.pillText, it.when === w && { color: '#fff' }]}>{label}</Text>
+                      <Text style={[st.pillText, it.when === w && { color: C.onAccent }]}>{label}</Text>
                     </Pressable>
                   ))}
                 </View>
@@ -157,8 +157,8 @@ export default function EditPlace() {
           </>
         )}
         <View style={st.nameRow}>
-          <TextInput style={[st.input, st.emojiInput]} value={newEmoji} onChangeText={setNewEmoji} placeholder="🎒" maxLength={4} accessibilityLabel="New item emoji" />
-          <TextInput style={[st.input, { flex: 1 }]} value={newItem} onChangeText={setNewItem} placeholder="Something else…" onSubmitEditing={addItem} returnKeyType="done" accessibilityLabel="New item name" />
+          <TextInput style={[st.input, st.emojiInput]} value={newEmoji} onChangeText={setNewEmoji} placeholder="🎒" placeholderTextColor={C.muted} maxLength={4} accessibilityLabel="New item emoji" />
+          <TextInput style={[st.input, { flex: 1 }]} value={newItem} onChangeText={setNewItem} placeholder="Something else…" placeholderTextColor={C.muted} onSubmitEditing={addItem} returnKeyType="done" accessibilityLabel="New item name" />
         </View>
         <Button kind="ghost" label="+ Add item" onPress={addItem} />
       </Card>
@@ -195,7 +195,7 @@ export default function EditPlace() {
 const st = StyleSheet.create({
   page: { padding: 16, gap: 12, maxWidth: 560, width: '100%', alignSelf: 'center', paddingBottom: 48 },
   nameRow: { flexDirection: 'row', gap: 8 },
-  input: { minWidth: 0, borderWidth: 1, borderColor: C.line, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, fontSize: 16, backgroundColor: '#fff', color: C.ink },
+  input: { minWidth: 0, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16, backgroundColor: C.bg, color: C.ink },
   emojiInput: { width: 56, textAlign: 'center', fontSize: 22 },
   hint: { fontSize: 13, color: C.muted, lineHeight: 18 },
   label: { fontSize: 15, color: C.ink, fontWeight: '600' },
@@ -204,7 +204,7 @@ const st = StyleSheet.create({
   itemLabel: { flex: 1, fontSize: 16, color: C.ink },
   link: { color: C.accent, fontWeight: '600', fontSize: 13 },
   suggest: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  pill: { borderRadius: 999, borderWidth: 1, borderColor: C.line, paddingVertical: 6, paddingHorizontal: 10, backgroundColor: '#fff' },
+  pill: { borderRadius: 999, paddingVertical: 7, paddingHorizontal: 12, backgroundColor: C.card2 },
   pillOn: { backgroundColor: C.accent, borderColor: C.accent },
   pillText: { fontSize: 13, color: C.ink, fontWeight: '600' },
   remove: { color: C.muted, fontSize: 16, paddingHorizontal: 6 },

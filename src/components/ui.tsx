@@ -1,19 +1,32 @@
-// Small building blocks reused across screens.
+// Small building blocks reused across screens, plus the design tokens.
+// Look: midnight violet, one loud electric-yellow action, mint for "got it", coral for "left behind".
 
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native';
 import type { Weekday } from '../lib/types';
 
 export const C = {
-  bg: '#FFF8F0',
-  card: '#FFFFFF',
-  ink: '#1F2430',
-  muted: '#767B87',
-  line: '#EFE4D6',
-  accent: '#FF6B3D',
-  accentSoft: '#FFE5DA',
-  green: '#1E9E62',
-  greenSoft: '#DDF5E8',
+  bg: '#15122E',
+  card: '#211D45',
+  card2: '#2B2657',
+  ink: '#F4F2FF',
+  muted: '#9D98CC',
+  line: '#353068',
+  accent: '#FFD84D', // electric yellow: the one loud thing
+  onAccent: '#15122E',
+  accentSoft: 'rgba(255,216,77,0.14)',
+  green: '#5CF2B5', // mint: you have it
+  greenSoft: 'rgba(92,242,181,0.14)',
+  coral: '#FF7A6B', // left behind
+  coralSoft: 'rgba(255,122,107,0.14)',
+  sky: 'rgba(130,170,255,0.16)',
+};
+
+/** Bricolage Grotesque for headlines and buttons; system font for body text. */
+export const F = {
+  heavy: 'BricolageGrotesque_800ExtraBold',
+  bold: 'BricolageGrotesque_700Bold',
+  semi: 'BricolageGrotesque_600SemiBold',
 };
 
 export function Card({ children, style }: { children: ReactNode; style?: ViewStyle }) {
@@ -36,7 +49,7 @@ export function Button({
       onPress={onPress}
       disabled={disabled}
       accessibilityRole="button"
-      style={({ pressed }) => [s.btn, s[`btn_${kind}`], (pressed || disabled) && { opacity: 0.6 }]}
+      style={({ pressed }) => [s.btn, s[`btn_${kind}`], pressed && { transform: [{ scale: 0.97 }] }, disabled && { opacity: 0.45 }]}
     >
       <Text style={[s.btnText, s[`btnText_${kind}`]]}>{label}</Text>
     </Pressable>
@@ -48,7 +61,7 @@ export function Stepper({ label, value, onChange, step = 1, min = 0, max = 999, 
 }) {
   return (
     <View style={s.row}>
-      <Text style={s.label}>{label}</Text>
+      <Text style={[s.label, { flex: 1 }]}>{label}</Text>
       <View style={s.stepper}>
         <Pressable style={s.stepBtn} onPress={() => onChange(Math.max(min, value - step))} accessibilityLabel={`Decrease ${label}`}>
           <Text style={s.stepBtnText}>−</Text>
@@ -76,7 +89,7 @@ export function DayPicker({ value, onChange }: { value: Weekday[]; onChange: (v:
             style={[s.day, on && s.dayOn]}
             accessibilityLabel={`Toggle day ${i}`}
           >
-            <Text style={[s.dayText, on && { color: '#fff' }]}>{d}</Text>
+            <Text style={[s.dayText, on && { color: C.onAccent }]}>{d}</Text>
           </Pressable>
         );
       })}
@@ -92,7 +105,7 @@ export function Toggle({ label, value, onChange, hint }: { label: string; value:
         {hint ? <Text style={s.hint}>{hint}</Text> : null}
       </View>
       <View style={[s.track, value && { backgroundColor: C.green }]}>
-        <View style={[s.knob, value && { transform: [{ translateX: 18 }] }]} />
+        <View style={[s.knob, value && { transform: [{ translateX: 18 }], backgroundColor: C.onAccent }]} />
       </View>
     </Pressable>
   );
@@ -103,7 +116,7 @@ export function Chip({ emoji, label, on, onPress, sub }: { emoji: string; label:
   return (
     <Pressable
       onPress={onPress}
-      style={[s.chip, on && s.chipOn]}
+      style={({ pressed }) => [s.chip, on && s.chipOn, pressed && { transform: [{ scale: 0.96 }] }]}
       accessibilityRole="checkbox"
       accessibilityState={{ checked: on }}
       accessibilityLabel={label}
@@ -120,35 +133,35 @@ export function SectionTitle({ children }: { children: ReactNode }) {
 }
 
 export const s = StyleSheet.create({
-  card: { backgroundColor: C.card, borderRadius: 20, padding: 16, borderWidth: 1, borderColor: C.line, gap: 10 },
-  btn: { borderRadius: 14, paddingVertical: 13, paddingHorizontal: 18, alignItems: 'center' },
+  card: { backgroundColor: C.card, borderRadius: 24, padding: 16, gap: 10 },
+  btn: { borderRadius: 999, paddingVertical: 15, paddingHorizontal: 20, alignItems: 'center' },
   btn_primary: { backgroundColor: C.accent },
   btn_secondary: { backgroundColor: C.accentSoft },
-  btn_ghost: { backgroundColor: 'transparent', borderWidth: 1, borderColor: C.line },
-  btn_danger: { backgroundColor: '#FDE2E2' },
-  btnText: { fontSize: 16, fontWeight: '700' },
-  btnText_primary: { color: '#fff' },
+  btn_ghost: { backgroundColor: 'transparent', borderWidth: 1.5, borderColor: C.line },
+  btn_danger: { backgroundColor: C.coralSoft },
+  btnText: { fontSize: 16, fontFamily: F.bold },
+  btnText_primary: { color: C.onAccent },
   btnText_secondary: { color: C.accent },
   btnText_ghost: { color: C.ink },
-  btnText_danger: { color: '#C0392B' },
+  btnText_danger: { color: C.coral },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingVertical: 4 },
   label: { fontSize: 15, color: C.ink, fontWeight: '600' },
-  hint: { fontSize: 13, color: C.muted, marginTop: 2 },
+  hint: { fontSize: 13, color: C.muted, marginTop: 2, lineHeight: 18 },
   stepper: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  stepBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: C.accentSoft, alignItems: 'center', justifyContent: 'center' },
+  stepBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: C.card2, alignItems: 'center', justifyContent: 'center' },
   stepBtnText: { fontSize: 20, color: C.accent, fontWeight: '700', marginTop: -2 },
-  stepVal: { minWidth: 64, textAlign: 'center', fontSize: 15, fontWeight: '700', color: C.ink },
+  stepVal: { minWidth: 64, textAlign: 'center', fontSize: 16, fontFamily: F.bold, color: C.ink },
   days: { flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
-  day: { width: 36, height: 36, borderRadius: 18, borderWidth: 1, borderColor: C.line, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' },
-  dayOn: { backgroundColor: C.accent, borderColor: C.accent },
-  dayText: { fontWeight: '700', color: C.ink },
-  track: { width: 44, height: 26, borderRadius: 13, backgroundColor: '#D9D4CC', padding: 3 },
-  knob: { width: 20, height: 20, borderRadius: 10, backgroundColor: '#fff' },
-  chip: { width: '31%', flexGrow: 1, minWidth: 92, alignItems: 'center', paddingVertical: 12, paddingHorizontal: 6, borderRadius: 16, borderWidth: 2, borderColor: C.line, backgroundColor: '#fff', gap: 2 },
+  day: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: C.card2 },
+  dayOn: { backgroundColor: C.accent },
+  dayText: { fontFamily: F.bold, color: C.ink },
+  track: { width: 46, height: 28, borderRadius: 14, backgroundColor: C.card2, padding: 4 },
+  knob: { width: 20, height: 20, borderRadius: 10, backgroundColor: C.muted },
+  chip: { width: '31%', flexGrow: 1, minWidth: 92, alignItems: 'center', paddingVertical: 14, paddingHorizontal: 6, borderRadius: 20, borderWidth: 2, borderColor: 'transparent', backgroundColor: C.card, gap: 3 },
   chipOn: { borderColor: C.accent, backgroundColor: C.accentSoft },
-  chipEmoji: { fontSize: 28 },
-  chipLabel: { fontSize: 13, fontWeight: '700', color: C.ink },
+  chipEmoji: { fontSize: 30 },
+  chipLabel: { fontSize: 14, fontFamily: F.bold, color: C.ink },
   chipSub: { fontSize: 11, color: C.muted, textAlign: 'center' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  section: { fontSize: 13, fontWeight: '800', color: C.muted, letterSpacing: 0.8, textTransform: 'uppercase', marginTop: 8 },
+  section: { fontSize: 20, fontFamily: F.heavy, color: C.ink, marginTop: 14, letterSpacing: -0.3 },
 });

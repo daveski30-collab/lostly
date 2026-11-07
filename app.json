@@ -6,18 +6,20 @@
     "version": "0.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.lostly.app",
       "infoPlist": {
-        "UIBackgroundModes": ["location"]
+        "UIBackgroundModes": [
+          "location"
+        ]
       }
     },
     "android": {
       "package": "com.lostly.app",
       "adaptiveIcon": {
-        "backgroundColor": "#FFF4E8",
+        "backgroundColor": "#15122E",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -40,7 +42,8 @@
           "isAndroidBackgroundLocationEnabled": true
         }
       ],
-      "expo-notifications"
+      "expo-notifications",
+      "expo-font"
     ]
   }
 }

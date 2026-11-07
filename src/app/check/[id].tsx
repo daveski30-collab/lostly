@@ -3,7 +3,7 @@
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Button, C } from '../../components/ui';
+import { Button, C, F } from '../../components/ui';
 import { allItems, smartChecklist, weatherWants } from '../../lib/rules';
 import { addCheck, addLeft, useLostly } from '../../lib/store';
 import type { Item, Weather } from '../../lib/types';
@@ -133,19 +133,19 @@ export default function Checklist() {
 
 const st = StyleSheet.create({
   page: { padding: 16, gap: 14, maxWidth: 560, width: '100%', alignSelf: 'center', paddingBottom: 40 },
-  title: { fontSize: 24, fontWeight: '900', color: C.ink },
-  weather: { fontSize: 14, color: C.ink, backgroundColor: '#EAF3FF', padding: 10, borderRadius: 12, overflow: 'hidden' },
+  title: { fontSize: 32, lineHeight: 35, fontFamily: F.heavy, color: C.ink, letterSpacing: -0.8 },
+  weather: { fontSize: 14, color: C.ink, backgroundColor: C.sky, padding: 12, borderRadius: 16, overflow: 'hidden' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  tile: { width: '47%', flexGrow: 1, minHeight: 110, backgroundColor: '#fff', borderRadius: 20, borderWidth: 2, borderColor: C.line, alignItems: 'center', justifyContent: 'center', padding: 12, gap: 4 },
-  tileOnce: { borderColor: '#F5B700', backgroundColor: '#FFF8DB' },
+  tile: { width: '47%', flexGrow: 1, minHeight: 124, backgroundColor: C.card, borderRadius: 26, borderWidth: 2, borderColor: 'transparent', alignItems: 'center', justifyContent: 'center', padding: 12, gap: 4 },
+  tileOnce: { borderColor: C.accent, backgroundColor: C.accentSoft },
   tileOn: { borderColor: C.green, backgroundColor: C.greenSoft },
-  tileEmoji: { fontSize: 38 },
-  tileLabel: { fontSize: 16, fontWeight: '700', color: C.ink, textAlign: 'center' },
+  tileEmoji: { fontSize: 42 },
+  tileLabel: { fontSize: 17, fontFamily: F.bold, color: C.ink, textAlign: 'center' },
   badge: { fontSize: 12, fontWeight: '700', color: C.accent },
-  check: { position: 'absolute', top: 8, right: 12, fontSize: 18, color: C.green, fontWeight: '900' },
+  check: { position: 'absolute', top: 10, right: 12, width: 24, height: 24, borderRadius: 12, overflow: 'hidden', backgroundColor: C.green, color: C.onAccent, textAlign: 'center', lineHeight: 24, fontSize: 14, fontWeight: '900' },
   hint: { fontSize: 13, color: C.muted, lineHeight: 18 },
   done: { flex: 1, padding: 24, gap: 10, justifyContent: 'center', maxWidth: 560, width: '100%', alignSelf: 'center' },
   bigEmoji: { fontSize: 56 },
-  grab: { fontSize: 22, fontWeight: '700', color: C.ink },
+  grab: { fontSize: 26, fontFamily: F.bold, color: C.coral },
   sub: { fontSize: 14, color: C.muted, marginVertical: 8 },
 });

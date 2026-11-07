@@ -2,7 +2,8 @@ import * as Location from 'expo-location';
 import { Redirect, router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { Button, C, Card, SectionTitle } from '../components/ui';
+import { Button, C, Card, F, SectionTitle } from '../components/ui';
+import { isTestPlace } from '../lib/testlab';
 import { handleEnter, handleExit } from '../lib/engine';
 import { enableNudges, notify, nudgesEnabled, supportsBackgroundNudges, syncGeofences } from '../lib/platform';
 import { distanceMeters } from '../lib/rules';
@@ -54,8 +55,9 @@ export default function Home() {
   if (onboarded === false) return <Redirect href="/welcome" />;
   if (!data || onboarded === null) return <ActivityIndicator style={{ marginTop: 40 }} color={C.accent} />;
 
-  const stats = computeStats(data.history, new Date());
-  const watching = data.places.filter((p) => p.location && p.rules.enabled).length;
+  const places = data.places.filter((p) => !isTestPlace(p));
+  const stats = computeStats(data.history.filter((h) => !isTestPlace({ id: h.placeId })), new Date());
+  const watching = places.filter((p) => p.location && p.rules.enabled).length;
 
   const turnOn = async () => {
     const problem = await enableNudges();
@@ -81,12 +83,12 @@ export default function Home() {
 
   // Manual "I am leaving" check: opens the closest place's list.
   const checkNow = async () => {
-    if (data.places.length === 1) return router.push(`/check/${data.places[0].id}`);
+    if (places.length === 1) return router.push(`/check/${places[0].id}`);
     setBusy('check');
-    let target = data.places[0];
+    let target = places[0];
     try {
       const here = await hereNow();
-      const located = data.places.filter((p) => p.location);
+      const located = places.filter((p) => p.location);
       if (located.length) target = located.reduce((a, b) => (distanceMeters(here, a.location!) <= distanceMeters(here, b.location!) ? a : b));
     } catch {}
     setBusy(null);
@@ -121,74 +123,94 @@ export default function Home() {
 
   return (
     <ScrollView contentContainerStyle={st.page}>
-      {data.places.length > 0 && (
-        <Pressable onPress={checkNow} style={({ pressed }) => [st.leave, pressed && { opacity: 0.85 }]} accessibilityRole="button">
-          <Text style={st.leaveEmoji}>🚪</Text>
-          <View style={{ flex: 1 }}>
-            <Text style={st.leaveTitle}>{busy === 'check' ? 'Finding your place…' : 'Leaving now?'}</Text>
-            <Text style={st.leaveSub}>Tap for a 3-second check of your stuff</Text>
+      <View style={st.top}>
+        <Text style={st.wordmark}>lostly</Text>
+        <Pressable onPress={() => router.push('/test')} style={st.labPill} accessibilityRole="button" accessibilityLabel="Open test lab">
+          <Text style={st.labText}>🧪 Test lab</Text>
+        </Pressable>
+      </View>
+
+      {places.length > 0 && (
+        <Pressable onPress={checkNow} style={({ pressed }) => [st.leave, pressed && { transform: [{ scale: 0.98 }] }]} accessibilityRole="button" accessibilityLabel="Leaving now?">
+          <Text style={st.leaveTitle}>{busy === 'check' ? 'Finding you…' : 'Leaving\nnow?'}</Text>
+          <View style={st.leaveFoot}>
+            <Text style={st.leaveSub}>3-second check of your stuff</Text>
+            <View style={st.leaveGo}>
+              <Text style={st.leaveGoText}>Go</Text>
+            </View>
           </View>
-          <Text style={st.leaveChev}>›</Text>
+          <Text style={st.leaveEmoji}>🔑</Text>
         </Pressable>
       )}
 
       {stats.checks > 0 ? (
         <View style={st.stats}>
-          <Stat big={`🔥 ${stats.streakDays}`} label={stats.streakDays === 1 ? 'day streak' : 'day streak'} />
-          <Stat big={`🛟 ${stats.saves}`} label={stats.saves === 1 ? 'thing saved' : 'things saved'} />
-          <Stat big={`✅ ${stats.checks}`} label="checks" />
+          <Stat big={`${stats.streakDays}`} icon="🔥" label={stats.streakDays === 1 ? 'day streak' : 'day streak'} />
+          <View style={st.statDiv} />
+          <Stat big={`${stats.saves}`} icon="🛟" label={stats.saves === 1 ? 'thing saved' : 'things saved'} />
+          <View style={st.statDiv} />
+          <Stat big={`${stats.checks}`} icon="✅" label="checks" />
         </View>
       ) : null}
 
       {data.left.length > 0 && (
-        <Card style={st.leftCard}>
-          <Text style={st.leftTitle}>📍 Left behind</Text>
+        <View style={st.leftCard}>
+          <Text style={st.leftTitle}>Left behind</Text>
           {data.left.map((l) => (
             <View key={l.id} style={st.leftRow}>
               <Text style={st.leftEmoji}>{l.emoji}</Text>
               <View style={{ flex: 1 }}>
                 <Text style={st.leftLabel}>{l.label}</Text>
                 <Text style={st.placeMeta}>
-                  At {nameOf(l.placeId)} · {new Date(l.at).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' })}
+                  At {nameOf(l.placeId)}, {new Date(l.at).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' })}
                 </Text>
               </View>
               <Pressable onPress={() => resolveLeft(l.id)} style={st.gotBack} accessibilityRole="button" accessibilityLabel={`Got ${l.label} back`}>
-                <Text style={st.gotBackText}>Got it ✓</Text>
+                <Text style={st.gotBackText}>Got it</Text>
               </Pressable>
             </View>
           ))}
-          <Text style={st.placeMeta}>{supportsBackgroundNudges ? 'Lostly will remind you when you get back there.' : 'On the phone, Lostly reminds you when you get back there.'}</Text>
-        </Card>
+          <Text style={st.placeMeta}>{supportsBackgroundNudges ? 'Lostly pings you when you are back there.' : 'On the phone, Lostly pings you when you are back there.'}</Text>
+        </View>
       )}
 
-      <Card style={enabled ? { backgroundColor: C.greenSoft, borderColor: C.greenSoft } : undefined}>
-        {supportsBackgroundNudges ? (
-          enabled ? (
-            <Text style={st.status}>✅ Nudges are on. Watching {watching} place{watching === 1 ? '' : 's'}.</Text>
-          ) : (
-            <>
-              <Text style={st.status}>Nudges are off, so Lostly cannot remind you yet.</Text>
-              <Button label="Turn on nudges" onPress={turnOn} />
-            </>
-          )
-        ) : (
-          <Text style={st.status}>🌐 Web preview. Automatic nudges need the phone app. {"\u201C"}Leaving now?{"\u201D"} works here too.</Text>
-        )}
-        {banner ? <Text style={st.banner}>{banner}</Text> : null}
-      </Card>
+      <View style={st.statusRow}>
+        <View style={[st.dot, { backgroundColor: enabled ? C.green : supportsBackgroundNudges ? C.coral : C.muted }]} />
+        <Text style={st.status}>
+          {supportsBackgroundNudges
+            ? enabled
+              ? `Watching ${watching} place${watching === 1 ? '' : 's'}`
+              : 'Nudges are off'
+            : 'Web preview: auto-nudges run in the phone app'}
+        </Text>
+        {supportsBackgroundNudges && !enabled ? (
+          <Pressable onPress={turnOn} style={st.turnOn} accessibilityRole="button">
+            <Text style={st.turnOnText}>Turn on</Text>
+          </Pressable>
+        ) : null}
+      </View>
+      {banner ? <Text style={st.banner}>{banner}</Text> : null}
 
       <SectionTitle>Your places</SectionTitle>
-      {data.places.map((p) => (
+      {places.map((p) => (
         <Card key={p.id}>
           <Pressable onPress={() => router.push(`/place/${p.id}`)} style={st.placeHead} accessibilityRole="button" accessibilityLabel={`Edit ${p.name}`}>
-            <Text style={st.placeEmoji}>{p.emoji}</Text>
+            <View style={st.placeBadge}>
+              <Text style={st.placeEmoji}>{p.emoji}</Text>
+            </View>
             <View style={{ flex: 1 }}>
               <Text style={st.placeName}>{p.name}</Text>
               <Text style={st.placeMeta}>{p.location ? ruleSummary(p) : 'Not saved yet'}</Text>
             </View>
             <Text style={st.chev}>›</Text>
           </Pressable>
-          <Text style={st.items}>{p.items.map((i) => i.emoji).join('  ')}</Text>
+          <View style={st.itemRow}>
+            {p.items.map((i) => (
+              <View key={i.id} style={st.itemBubble}>
+                <Text style={st.itemEmoji}>{i.emoji}</Text>
+              </View>
+            ))}
+          </View>
           {(p.extras ?? []).map((x) => (
             <View key={x.id} style={st.onceRow}>
               <Text style={st.onceText}>📝 Next time: {x.label}</Text>
@@ -203,7 +225,8 @@ export default function Home() {
                 style={st.noteInput}
                 value={note}
                 onChangeText={setNote}
-                placeholder="e.g. Permission slip, library book"
+                placeholder="Permission slip, library book…"
+                placeholderTextColor={C.muted}
                 autoFocus
                 onSubmitEditing={() => saveNote(p.id)}
                 returnKeyType="done"
@@ -218,18 +241,24 @@ export default function Home() {
           {testing === p.id ? (
             <View style={st.tryRow}>
               <Button kind="ghost" label="Left after 1 hr" onPress={() => tryLeaving(p, 60)} />
-              <Button kind="ghost" label="Quick drive-by" onPress={() => tryLeaving(p, 1)} />
+              <Button kind="ghost" label="Drive-by" onPress={() => tryLeaving(p, 1)} />
               <Button kind="ghost" label="Arrive" onPress={() => tryArriving(p)} />
             </View>
           ) : (
             <View style={st.links}>
               {noteFor !== p.id && (
-                <Pressable onPress={() => { setNoteFor(p.id); setNote(''); }} accessibilityRole="button">
-                  <Text style={st.addOnce}>📝 Remember something for next time</Text>
+                <Pressable
+                  onPress={() => {
+                    setNoteFor(p.id);
+                    setNote('');
+                  }}
+                  accessibilityRole="button"
+                >
+                  <Text style={st.addOnce}>+ Something for next time</Text>
                 </Pressable>
               )}
               <Pressable onPress={() => setTesting(p.id)}>
-                <Text style={st.testLink}>Test the rules</Text>
+                <Text style={st.testLink}>Try it</Text>
               </Pressable>
             </View>
           )}
@@ -237,65 +266,91 @@ export default function Home() {
       ))}
       <Button kind="ghost" label="+ Add a place" onPress={() => router.push('/place/new')} />
 
-      {data.log.length > 0 && (
+      {data.log.filter((l) => !isTestPlace({ id: l.placeId })).length > 0 && (
         <>
-          <SectionTitle>Why Lostly did what it did</SectionTitle>
-          <Card>
-            {data.log.slice(0, 8).map((l, i) => (
-              <Text key={i} style={st.log}>
-                <Text style={{ fontWeight: '700' }}>{nameOf(l.placeId)}</Text> · {new Date(l.at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} · {l.text}
-              </Text>
-            ))}
-          </Card>
+          <SectionTitle>Activity</SectionTitle>
+          <View style={st.logBox}>
+            {data.log
+              .filter((l) => !isTestPlace({ id: l.placeId }))
+              .slice(0, 6)
+              .map((l, i) => (
+                <View key={i} style={st.logRow}>
+                  <Text style={st.logTime}>{new Date(l.at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</Text>
+                  <Text style={st.log}>
+                    <Text style={{ fontWeight: '700' }}>{nameOf(l.placeId)}</Text> {l.text.charAt(0).toLowerCase() + l.text.slice(1)}
+                  </Text>
+                </View>
+              ))}
+          </View>
         </>
       )}
     </ScrollView>
   );
 }
 
-function Stat({ big, label }: { big: string; label: string }) {
+function Stat({ big, icon, label }: { big: string; icon: string; label: string }) {
   return (
     <View style={st.stat}>
-      <Text style={st.statBig}>{big}</Text>
+      <Text style={st.statBig}>
+        {big} <Text style={st.statIcon}>{icon}</Text>
+      </Text>
       <Text style={st.statLabel}>{label}</Text>
     </View>
   );
 }
 
 const st = StyleSheet.create({
-  page: { padding: 16, gap: 12, maxWidth: 560, width: '100%', alignSelf: 'center', paddingBottom: 48 },
-  leave: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: C.accent, borderRadius: 22, padding: 18 },
-  leaveEmoji: { fontSize: 34 },
-  leaveTitle: { fontSize: 22, fontWeight: '900', color: '#fff' },
-  leaveSub: { fontSize: 14, color: '#FFE5DA', marginTop: 2 },
-  leaveChev: { fontSize: 32, color: '#fff' },
-  stats: { flexDirection: 'row', gap: 8 },
-  stat: { flex: 1, backgroundColor: C.card, borderRadius: 16, borderWidth: 1, borderColor: C.line, paddingVertical: 12, alignItems: 'center' },
-  statBig: { fontSize: 20, fontWeight: '900', color: C.ink },
+  page: { padding: 16, paddingTop: 20, gap: 12, maxWidth: 560, width: '100%', alignSelf: 'center', paddingBottom: 56 },
+  top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 8, paddingBottom: 4 },
+  wordmark: { fontFamily: F.heavy, fontSize: 30, color: C.ink, letterSpacing: -1 },
+  labPill: { backgroundColor: C.card, borderRadius: 999, paddingVertical: 8, paddingHorizontal: 12 },
+  labText: { color: C.muted, fontFamily: F.semi, fontSize: 13 },
+  leave: { backgroundColor: C.accent, borderRadius: 32, padding: 22, minHeight: 190, justifyContent: 'space-between', overflow: 'hidden' },
+  leaveTitle: { fontFamily: F.heavy, fontSize: 52, lineHeight: 52, color: C.onAccent, letterSpacing: -2 },
+  leaveFoot: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 18 },
+  leaveSub: { fontSize: 15, color: C.onAccent, opacity: 0.75, fontWeight: '600', flex: 1 },
+  leaveGo: { backgroundColor: C.onAccent, borderRadius: 999, paddingVertical: 10, paddingHorizontal: 22 },
+  leaveGoText: { color: C.accent, fontFamily: F.heavy, fontSize: 16 },
+  leaveEmoji: { position: 'absolute', right: -6, top: -4, fontSize: 96, opacity: 0.9, transform: [{ rotate: '-18deg' }] },
+  stats: { flexDirection: 'row', backgroundColor: C.card, borderRadius: 24, paddingVertical: 14 },
+  stat: { flex: 1, alignItems: 'center' },
+  statDiv: { width: 1, backgroundColor: C.line, marginVertical: 4 },
+  statBig: { fontSize: 26, fontFamily: F.heavy, color: C.ink },
+  statIcon: { fontSize: 18 },
   statLabel: { fontSize: 12, color: C.muted, marginTop: 2 },
-  status: { fontSize: 15, color: C.ink, fontWeight: '600', lineHeight: 21 },
-  banner: { fontSize: 14, color: C.ink, backgroundColor: '#FFF3C4', padding: 10, borderRadius: 10 },
+  statusRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 4 },
+  dot: { width: 8, height: 8, borderRadius: 4 },
+  status: { flex: 1, fontSize: 14, color: C.muted, fontWeight: '600' },
+  turnOn: { backgroundColor: C.accent, borderRadius: 999, paddingVertical: 7, paddingHorizontal: 14 },
+  turnOnText: { color: C.onAccent, fontFamily: F.bold, fontSize: 13 },
+  banner: { fontSize: 14, color: C.ink, backgroundColor: C.card2, padding: 12, borderRadius: 16, overflow: 'hidden', lineHeight: 20 },
   placeHead: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  placeEmoji: { fontSize: 32 },
-  placeName: { fontSize: 18, fontWeight: '800', color: C.ink },
+  placeBadge: { width: 48, height: 48, borderRadius: 16, backgroundColor: C.card2, alignItems: 'center', justifyContent: 'center' },
+  placeEmoji: { fontSize: 26 },
+  placeName: { fontSize: 19, fontFamily: F.bold, color: C.ink },
   placeMeta: { fontSize: 13, color: C.muted, marginTop: 2 },
   chev: { fontSize: 28, color: C.muted },
-  items: { fontSize: 22, letterSpacing: 2 },
+  itemRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  itemBubble: { width: 38, height: 38, borderRadius: 19, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
+  itemEmoji: { fontSize: 19 },
   tryRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
-  testLink: { color: C.muted, fontSize: 13, fontWeight: '600', textDecorationLine: 'underline' },
-  leftCard: { backgroundColor: '#FFF1EC', borderColor: '#FFD3C2' },
-  leftTitle: { fontSize: 16, fontWeight: '900', color: C.accent },
+  testLink: { color: C.muted, fontSize: 13, fontWeight: '600' },
+  leftCard: { backgroundColor: C.coralSoft, borderRadius: 24, padding: 16, gap: 10, borderWidth: 1.5, borderColor: C.coral },
+  leftTitle: { fontSize: 18, fontFamily: F.heavy, color: C.coral },
   leftRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   leftEmoji: { fontSize: 28 },
-  leftLabel: { fontSize: 16, fontWeight: '800', color: C.ink },
-  gotBack: { backgroundColor: C.greenSoft, borderRadius: 999, paddingVertical: 8, paddingHorizontal: 12 },
-  gotBackText: { color: C.green, fontWeight: '800', fontSize: 13 },
-  onceRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF8DB', borderRadius: 10, paddingVertical: 6, paddingHorizontal: 10 },
-  onceText: { flex: 1, fontSize: 14, fontWeight: '700', color: C.ink },
+  leftLabel: { fontSize: 16, fontFamily: F.bold, color: C.ink },
+  gotBack: { backgroundColor: C.green, borderRadius: 999, paddingVertical: 8, paddingHorizontal: 14 },
+  gotBackText: { color: C.onAccent, fontFamily: F.bold, fontSize: 13 },
+  onceRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.accentSoft, borderRadius: 12, paddingVertical: 8, paddingHorizontal: 12 },
+  onceText: { flex: 1, fontSize: 14, fontWeight: '700', color: C.accent },
   onceX: { color: C.muted, fontSize: 15, paddingHorizontal: 4 },
   noteRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
-  noteInput: { flex: 1, minWidth: 0, borderWidth: 1, borderColor: C.line, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, fontSize: 15, backgroundColor: '#fff', color: C.ink },
-  links: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
-  addOnce: { color: C.accent, fontSize: 14, fontWeight: '700' },
-  log: { fontSize: 13, color: C.ink, lineHeight: 19 },
+  noteInput: { flex: 1, minWidth: 0, borderRadius: 999, paddingHorizontal: 16, paddingVertical: 12, fontSize: 15, backgroundColor: C.bg, color: C.ink },
+  links: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap', paddingTop: 2 },
+  addOnce: { color: C.accent, fontSize: 14, fontFamily: F.semi },
+  logBox: { gap: 10, paddingHorizontal: 4 },
+  logRow: { flexDirection: 'row', gap: 12 },
+  logTime: { width: 64, fontSize: 13, color: C.muted },
+  log: { flex: 1, fontSize: 13, color: C.ink, lineHeight: 19 },
 });

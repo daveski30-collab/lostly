@@ -16,7 +16,14 @@ export function parseOpenMeteo(json: unknown): Weather | null {
   return { tempF, rainChance: probs.length ? Math.max(...probs) : 0 };
 }
 
+/** Test Lab hook: force a weather answer (undefined = use the real forecast). */
+let override: Weather | null | undefined;
+export function setWeatherOverride(w: Weather | null | undefined) {
+  override = w;
+}
+
 export async function getWeather(loc: { latitude: number; longitude: number } | null): Promise<Weather | null> {
+  if (override !== undefined) return override;
   if (!loc) return null;
   // ~1 km grid so nearby places share a cached answer.
   const key = `${loc.latitude.toFixed(2)},${loc.longitude.toFixed(2)}`;

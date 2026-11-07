@@ -45,6 +45,25 @@ export async function deletePlace(id: string) {
   await savePlaces((await getPlaces()).filter((p) => p.id !== id));
 }
 
+/** Remove a place and every trace of it (used by the Test Lab to clean up after itself). */
+export async function purgePlace(id: string) {
+  await deletePlace(id);
+  await write(KEYS.history, (await getHistory()).filter((h) => h.placeId !== id));
+  await write(KEYS.log, (await getLog()).filter((l) => l.placeId !== id));
+  await write(KEYS.left, (await getLeft()).filter((l) => l.placeId !== id));
+  const v = await getVisit();
+  delete v.enteredAt[id];
+  delete v.lastNudgedAt[id];
+  delete v.lastCheckedAt[id];
+  await saveVisit(v);
+}
+
+/** Start over: wipes everything on this device. */
+export async function resetAll() {
+  await AsyncStorage.multiRemove([...Object.values(KEYS), 'lostly.handled']);
+  listeners.forEach((l) => l());
+}
+
 export const getVisit = () => read<VisitState>(KEYS.visit, { enteredAt: {}, lastNudgedAt: {}, lastCheckedAt: {} });
 export const saveVisit = (v: VisitState) => write(KEYS.visit, v);
 

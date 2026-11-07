@@ -4,7 +4,7 @@ import * as Location from 'expo-location';
 import { Stack, router } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Button, C, Chip, s as ui } from '../components/ui';
+import { Button, C, Chip, F, s as ui } from '../components/ui';
 import { enableNudges, supportsBackgroundNudges, syncGeofences } from '../lib/platform';
 import { ITEM_LIBRARY, PLACE_PRESETS, placeFromPreset } from '../lib/presets';
 import { savePlaces, setOnboarded } from '../lib/store';
@@ -132,11 +132,11 @@ export default function Welcome() {
 
 const st = StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.bg },
-  footer: { padding: 16, paddingBottom: 28, borderTopWidth: 1, borderColor: C.line, backgroundColor: C.bg, width: '100%', maxWidth: 560, alignSelf: 'center' },
+  footer: { padding: 16, paddingBottom: 28, backgroundColor: C.bg, width: '100%', maxWidth: 560, alignSelf: 'center' },
   page: { padding: 20, paddingTop: 48, gap: 14, maxWidth: 560, width: '100%', alignSelf: 'center', paddingBottom: 24 },
   dots: { flexDirection: 'row', gap: 6, alignSelf: 'center' },
-  dot: { width: 28, height: 6, borderRadius: 3, backgroundColor: C.line },
+  dot: { width: 28, height: 6, borderRadius: 3, backgroundColor: C.card2 },
   big: { fontSize: 44, textAlign: 'center', marginTop: 8 },
-  title: { fontSize: 26, fontWeight: '900', color: C.ink, textAlign: 'center' },
+  title: { fontSize: 30, lineHeight: 33, fontFamily: F.heavy, color: C.ink, textAlign: 'center', letterSpacing: -0.8 },
   sub: { fontSize: 15, color: C.muted, textAlign: 'center', lineHeight: 21 },
 });

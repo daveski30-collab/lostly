@@ -112,7 +112,9 @@ export default function EditPlace() {
               <Text style={st.itemEmoji}>{it.emoji}</Text>
               <Text style={st.itemLabel}>{it.label}</Text>
               <Pressable onPress={() => setOpenDaysFor(openDaysFor === it.id ? null : it.id)}>
-                <Text style={st.link}>{it.days?.length ? `${it.days.length} days` : 'Every day'}</Text>
+                <Text style={st.link}>
+                  {[it.days?.length ? `${it.days.length} days` : 'Every day', it.when === 'cold' ? '🥶' : it.when === 'rain' ? '🌧️' : ''].filter(Boolean).join(' ')}
+                </Text>
               </Pressable>
               <Pressable onPress={() => set({ items: place.items.filter((x) => x.id !== it.id) })} accessibilityLabel={`Remove ${it.label}`}>
                 <Text style={st.remove}>✕</Text>
@@ -120,8 +122,24 @@ export default function EditPlace() {
             </View>
             {openDaysFor === it.id && (
               <View style={{ paddingLeft: 40, paddingBottom: 8, gap: 6 }}>
-                <Text style={st.hint}>Only remind me on these days (none selected = every day):</Text>
+                <Text style={st.hint}>Days (none selected = every day):</Text>
                 <DayPicker value={it.days ?? []} onChange={(days) => set({ items: place.items.map((x) => (x.id === it.id ? { ...x, days } : x)) })} />
+                <Text style={st.hint}>Weather:</Text>
+                <View style={st.suggest}>
+                  {([
+                    [undefined, 'Any weather'],
+                    ['cold', `🥶 Only when cold`],
+                    ['rain', '🌧️ Only when rain is likely'],
+                  ] as const).map(([w, label]) => (
+                    <Pressable
+                      key={label}
+                      style={[st.pill, it.when === w && st.pillOn]}
+                      onPress={() => set({ items: place.items.map((x) => (x.id === it.id ? { ...x, when: w } : x)) })}
+                    >
+                      <Text style={[st.pillText, it.when === w && { color: '#fff' }]}>{label}</Text>
+                    </Pressable>
+                  ))}
+                </View>
               </View>
             )}
           </View>
@@ -187,6 +205,7 @@ const st = StyleSheet.create({
   link: { color: C.accent, fontWeight: '600', fontSize: 13 },
   suggest: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   pill: { borderRadius: 999, borderWidth: 1, borderColor: C.line, paddingVertical: 6, paddingHorizontal: 10, backgroundColor: '#fff' },
+  pillOn: { backgroundColor: C.accent, borderColor: C.accent },
   pillText: { fontSize: 13, color: C.ink, fontWeight: '600' },
   remove: { color: C.muted, fontSize: 16, paddingHorizontal: 6 },
 });

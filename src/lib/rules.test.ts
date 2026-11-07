@@ -79,3 +79,35 @@ it('measures distance', () => {
   const d = distanceMeters({ latitude: 40, longitude: -75 }, { latitude: 40.001, longitude: -75 });
   expect(Math.round(d)).toBe(111);
 });
+
+describe('weather and one-time items', () => {
+  const coat = { ...gym, items: [
+    { id: 'keys', label: 'Keys', emoji: '🔑' },
+    { id: 'jacket', label: 'Jacket', emoji: '🧥', when: 'cold' as const },
+    { id: 'umbrella', label: 'Umbrella', emoji: '☂️', when: 'rain' as const },
+  ] };
+
+  it('shows jacket only when cold and umbrella only when rain is likely', () => {
+    const warmDry = smartChecklist(coat, [], tue3pm, { tempF: 72, rainChance: 5 }).map((i) => i.id);
+    expect(warmDry).toEqual(['keys']);
+    const coldWet = smartChecklist(coat, [], tue3pm, { tempF: 41, rainChance: 70 }).map((i) => i.id);
+    expect(coldWet).toEqual(expect.arrayContaining(['keys', 'jacket', 'umbrella']));
+    // Weather unknown: show everything, to be safe.
+    expect(smartChecklist(coat, [], tue3pm, null)).toHaveLength(3);
+  });
+
+  it('calls out the weather in the nudge', () => {
+    expect(nudgeMessage(coat, [], tue3pm, { tempF: 60, rainChance: 80 }).body).toContain('80% chance of rain');
+  });
+
+  it('one-time items go first, get called out, and override day/hour/dwell rules', () => {
+    const p = { ...gym, extras: [{ id: 'once-1', label: 'Permission slip', emoji: '📝' }], rules: { ...DEFAULT_RULES, activeDays: [1] as Place['rules']['activeDays'] } };
+    const s = empty();
+    s.enteredAt.gym = tue3pm.getTime() - 60_000;
+    expect(shouldNudgeOnExit(p, s, tue3pm)).toEqual({ nudge: true });
+    expect(smartChecklist(p, [], tue3pm)[0].id).toBe('once-1');
+    expect(nudgeMessage(p, [], tue3pm).body).toContain('Permission slip');
+    // Still respects the off switch.
+    expect(shouldNudgeOnExit({ ...p, rules: { ...p.rules, enabled: false } }, s, tue3pm).nudge).toBe(false);
+  });
+});

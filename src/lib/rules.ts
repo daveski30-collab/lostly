@@ -1,11 +1,16 @@
 // The smart nudge engine. Pure functions with no phone stuff, so they are easy to test.
 // Every rule is a reason NOT to bother you. If none of them apply, you get a nudge.
 
-import type { CheckRecord, Item, NudgeDecision, NudgeRules, Place, VisitState, Weekday } from './types';
+import type { CheckRecord, Item, NudgeDecision, NudgeRules, Place, VisitState, Weather, Weekday } from './types';
 
 const MINUTE = 60_000;
 
 export const MIN_RADIUS_METERS = 100;
+
+/** Below this, "cold" items (jacket, hat) show up. */
+export const COLD_F = 55;
+/** At or above this chance of rain in the next few hours, "rain" items (umbrella) show up. */
+export const RAIN_PCT = 40;
 
 export const DEFAULT_RULES: NudgeRules = {
   enabled: true,
@@ -23,25 +28,29 @@ export function inHourWindow(hour: number, window: { start: number; end: number 
   return start < end ? hour >= start && hour < end : hour >= start || hour < end;
 }
 
-/** Decide whether leaving `place` right now deserves a nudge. */
-export function shouldNudgeOnExit(place: Place, state: VisitState, now: Date): NudgeDecision {
+/**
+ * Decide whether leaving `place` right now deserves a nudge.
+ * A one-time item ("permission slip") is important enough to skip the day, hour, and stay-length rules.
+ */
+export function shouldNudgeOnExit(place: Place, state: VisitState, now: Date, weather: Weather | null = null): NudgeDecision {
   const r = place.rules;
   const t = now.getTime();
+  const hasOneTime = (place.extras ?? []).length > 0;
 
   if (!r.enabled) return { nudge: false, reason: 'Nudges are turned off for this place' };
 
-  if (r.activeDays.length > 0 && !r.activeDays.includes(now.getDay() as Weekday)) {
-    return { nudge: false, reason: 'Not an active day for this place' };
-  }
-
-  if (r.activeHours && !inHourWindow(now.getHours(), r.activeHours)) {
-    return { nudge: false, reason: 'Outside the active hours for this place' };
-  }
-
-  // If we never saw you arrive (e.g. the app was installed while you were here), give you the benefit of the doubt.
-  const entered = state.enteredAt[place.id];
-  if (entered !== undefined && t - entered < r.minDwellMinutes * MINUTE) {
-    return { nudge: false, reason: `You were only here ${Math.round((t - entered) / MINUTE)} min (need ${r.minDwellMinutes})` };
+  if (!hasOneTime) {
+    if (r.activeDays.length > 0 && !r.activeDays.includes(now.getDay() as Weekday)) {
+      return { nudge: false, reason: 'Not an active day for this place' };
+    }
+    if (r.activeHours && !inHourWindow(now.getHours(), r.activeHours)) {
+      return { nudge: false, reason: 'Outside the active hours for this place' };
+    }
+    // If we never saw you arrive (e.g. the app was installed while you were here), give you the benefit of the doubt.
+    const entered = state.enteredAt[place.id];
+    if (entered !== undefined && t - entered < r.minDwellMinutes * MINUTE) {
+      return { nudge: false, reason: `You were only here ${Math.round((t - entered) / MINUTE)} min (need ${r.minDwellMinutes})` };
+    }
   }
 
   const lastNudge = state.lastNudgedAt[place.id];
@@ -54,17 +63,27 @@ export function shouldNudgeOnExit(place: Place, state: VisitState, now: Date): N
     return { nudge: false, reason: 'You already checked your stuff before leaving' };
   }
 
-  if (itemsForToday(place.items, now).length === 0) {
+  if (itemsForToday(allItems(place), now, weather).length === 0) {
     return { nudge: false, reason: 'Nothing on the list for today' };
   }
 
   return { nudge: true };
 }
 
-/** Items that apply today (day-specific items like "gym bag on Tuesdays"). */
-export function itemsForToday(items: Item[], now: Date): Item[] {
+/** Regular items plus any one-time "just for next time" items. */
+export const allItems = (place: Place): Item[] => [...place.items, ...(place.extras ?? [])];
+
+/** Does the weather call for this item? Unknown weather = show it, to be safe. */
+export function weatherWants(item: Item, weather: Weather | null): boolean {
+  if (!item.when || !weather) return true;
+  if (item.when === 'cold') return weather.tempF < COLD_F;
+  return weather.rainChance >= RAIN_PCT;
+}
+
+/** Items that apply right now: the right day of the week, and the right weather. */
+export function itemsForToday(items: Item[], now: Date, weather: Weather | null = null): Item[] {
   const day = now.getDay() as Weekday;
-  return items.filter((i) => !i.days || i.days.length === 0 || i.days.includes(day));
+  return items.filter((i) => (!i.days || i.days.length === 0 || i.days.includes(day)) && weatherWants(i, weather));
 }
 
 /** How many times each item was forgotten at this place. */
@@ -78,18 +97,28 @@ export function missCounts(history: CheckRecord[], placeId: string): Record<stri
 }
 
 /** Today's checklist, with the things you forget most at the top. */
-export function smartChecklist(place: Place, history: CheckRecord[], now: Date): (Item & { misses: number })[] {
+export function smartChecklist(place: Place, history: CheckRecord[], now: Date, weather: Weather | null = null): (Item & { misses: number; oneTime: boolean })[] {
   const counts = missCounts(history, place.id);
-  return itemsForToday(place.items, now)
-    .map((i) => ({ ...i, misses: counts[i.id] ?? 0 }))
-    .sort((a, b) => b.misses - a.misses);
+  const oneTime = new Set((place.extras ?? []).map((i) => i.id));
+  return itemsForToday(allItems(place), now, weather)
+    .map((i) => ({ ...i, misses: counts[i.id] ?? 0, oneTime: oneTime.has(i.id) }))
+    // One-time items first (easy to forget), then most-forgotten.
+    .sort((a, b) => Number(b.oneTime) - Number(a.oneTime) || b.misses - a.misses);
 }
 
 /** The words in the notification. Calls out your most-forgotten item when there is one. */
-export function nudgeMessage(place: Place, history: CheckRecord[], now: Date): { title: string; body: string } {
-  const list = smartChecklist(place, history, now);
+export function nudgeMessage(place: Place, history: CheckRecord[], now: Date, weather: Weather | null = null): { title: string; body: string } {
+  const list = smartChecklist(place, history, now, weather);
   const top = list[0];
   const title = `Leaving ${place.name}? ${place.emoji}`;
+  if (top?.oneTime) {
+    return { title, body: `Don't forget: ${top.emoji} ${top.label} (just for today). Tap to check your stuff.` };
+  }
+  const weatherItem = list.find((i) => i.when && weather);
+  if (weatherItem && weather) {
+    const why = weatherItem.when === 'rain' ? `${weather.rainChance}% chance of rain` : `only ${Math.round(weather.tempF)}°F out`;
+    return { title, body: `${why[0].toUpperCase()}${why.slice(1)}: grab your ${weatherItem.label.toLowerCase()} ${weatherItem.emoji}. Tap to check the rest.` };
+  }
   if (top && top.misses >= 2) {
     return { title, body: `Heads up: you have left your ${top.label.toLowerCase()} here ${top.misses} times. Tap to check your stuff.` };
   }

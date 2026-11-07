@@ -10,7 +10,15 @@ export type Item = {
   emoji: string;
   /** Only show this item on certain days (e.g. gym bag on Tue/Thu). Empty or missing = every day. */
   days?: Weekday[];
+  /** Only show when the weather calls for it (e.g. jacket when cold, umbrella when rain is likely). */
+  when?: 'cold' | 'rain';
 };
+
+/** Simple weather snapshot used to decide weather items. */
+export type Weather = { tempF: number; rainChance: number };
+
+/** Something you said you left behind, so Lostly can help you get it back. */
+export type LeftBehind = { id: string; label: string; emoji: string; placeId: string; at: number };
 
 /**
  * The "smart" part. These rules decide whether leaving a place is worth a nudge,
@@ -41,6 +49,8 @@ export type Place = {
   /** How far (meters) you go before Lostly counts it as "you left". Phones need at least ~100m to be reliable. */
   radiusMeters: number;
   items: Item[];
+  /** One-time items for the next time you leave (permission slip, library book). Cleared after a check. */
+  extras?: Item[];
   rules: NudgeRules;
 };
 
@@ -58,8 +68,10 @@ export type VisitState = {
 export type CheckRecord = {
   placeId: string;
   at: number;
-  /** Item ids you said you did NOT have. */
+  /** Item ids you said you did NOT have when you checked. */
   missing: string[];
+  /** Of those, the ones you left without (the rest you went back and grabbed = a save). */
+  left?: string[];
 };
 
 export type NudgeDecision = { nudge: true } | { nudge: false; reason: string };

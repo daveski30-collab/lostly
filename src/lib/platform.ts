@@ -1,11 +1,12 @@
 // Web version. Browsers cannot watch your location in the background,
 // so on the web Lostly is a preview: set up places and use "Try leaving" to test the rules.
 
+import type { NotifyMsg } from './engine';
 import type { Place } from './types';
 
 export const supportsBackgroundNudges = false;
 
-export async function notify(_msg: { title: string; body: string; placeId: string }) {
+export async function notify(_msg: NotifyMsg) {
   // On the web the app shows the checklist directly instead of a notification.
 }
 
@@ -19,6 +20,6 @@ export async function nudgesEnabled() {
 
 export async function syncGeofences(_places: Place[]) {}
 
-export function onNudgeTapped(_open: (placeId: string) => void) {
+export function onNudgeTapped(_open: (path: string) => void) {
   return () => {};
 }

@@ -8,22 +8,23 @@ const dayKey = (t: number) => {
 };
 
 export type Stats = {
-  /** Times Lostly caught something you were about to leave behind. */
+  /** Items Lostly caught that you then went back and grabbed. */
   saves: number;
-  /** Consecutive days (ending today or yesterday) with checks and nothing forgotten. */
+  /** Consecutive days (ending today or yesterday) with a check and nothing actually left behind. */
   streakDays: number;
   /** Total checklists completed. */
   checks: number;
 };
 
 export function computeStats(history: CheckRecord[], now: Date): Stats {
-  const saves = history.filter((h) => h.missing.length > 0).length;
+  const leftOf = (h: CheckRecord) => new Set(h.left ?? []);
+  const saves = history.reduce((n, h) => n + h.missing.filter((id) => !leftOf(h).has(id)).length, 0);
 
-  // Per day: did you check, and did you miss anything?
-  const days = new Map<string, boolean>(); // dayKey -> clean (nothing missing)
+  // Per day: did you check, and did you actually leave anything behind?
+  const days = new Map<string, boolean>(); // dayKey -> clean
   for (const h of history) {
     const k = dayKey(h.at);
-    days.set(k, (days.get(k) ?? true) && h.missing.length === 0);
+    days.set(k, (days.get(k) ?? true) && leftOf(h).size === 0);
   }
 
   let streak = 0;

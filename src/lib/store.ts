@@ -3,13 +3,14 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
-import type { CheckRecord, Place, VisitState } from './types';
+import { newId } from './ids';
+import type { CheckRecord, Item, LeftBehind, Place, VisitState } from './types';
 
-const KEYS = { places: 'lostly.places', visit: 'lostly.visit', history: 'lostly.history', log: 'lostly.log', onboarded: 'lostly.onboarded' };
+const KEYS = { places: 'lostly.places', visit: 'lostly.visit', history: 'lostly.history', log: 'lostly.log', onboarded: 'lostly.onboarded', left: 'lostly.left' };
 
 export type LogEntry = { at: number; placeId: string; text: string };
 
-export { newId } from './ids';
+export { newId };
 
 async function read<T>(key: string, fallback: T): Promise<T> {
   try {
@@ -48,12 +49,50 @@ export const getVisit = () => read<VisitState>(KEYS.visit, { enteredAt: {}, last
 export const saveVisit = (v: VisitState) => write(KEYS.visit, v);
 
 export const getHistory = () => read<CheckRecord[]>(KEYS.history, []);
-export async function addCheck(rec: CheckRecord) {
+export async function addCheck(input: Omit<CheckRecord, 'at'> & { at?: number }) {
+  const rec: CheckRecord = { ...input, at: input.at ?? Date.now() };
   const h = await getHistory();
   await write(KEYS.history, [...h, rec].slice(-200));
   const v = await getVisit();
   v.lastCheckedAt[rec.placeId] = rec.at;
   await saveVisit(v);
+  // One-time items are done once you have checked out of the place.
+  const places = await getPlaces();
+  const p = places.find((x) => x.id === rec.placeId);
+  if (p?.extras?.length) await upsertPlace({ ...p, extras: [] });
+}
+
+/** "Just for next time": add a one-off item to a place's next checklist. */
+export async function addOneTime(placeId: string, label: string, emoji = '📝') {
+  const p = (await getPlaces()).find((x) => x.id === placeId);
+  if (!p || !label.trim()) return;
+  const item: Item = { id: `once-${newId()}`, label: label.trim(), emoji };
+  await upsertPlace({ ...p, extras: [...(p.extras ?? []), item] });
+}
+
+export async function removeOneTime(placeId: string, itemId: string) {
+  const p = (await getPlaces()).find((x) => x.id === placeId);
+  if (p) await upsertPlace({ ...p, extras: (p.extras ?? []).filter((i) => i.id !== itemId) });
+}
+
+// Left-behind tracker: what you left where, until you get it back.
+export const getLeft = () => read<LeftBehind[]>(KEYS.left, []);
+export async function addLeft(placeId: string, items: Item[]) {
+  const now = Date.now();
+  const add = items.map((i) => ({ id: newId(), label: i.label, emoji: i.emoji, placeId, at: now }));
+  await write(KEYS.left, [...(await getLeft()), ...add]);
+  // Mark them on the latest check here, so stats only count real saves.
+  const h = await getHistory();
+  for (let k = h.length - 1; k >= 0; k--) {
+    if (h[k].placeId === placeId) {
+      h[k] = { ...h[k], left: items.map((i) => i.id) };
+      break;
+    }
+  }
+  await write(KEYS.history, h);
+}
+export async function resolveLeft(id: string) {
+  await write(KEYS.left, (await getLeft()).filter((l) => l.id !== id));
 }
 
 export const getLog = () => read<LogEntry[]>(KEYS.log, []);
@@ -74,9 +113,10 @@ export async function markHandled(id: string): Promise<boolean> {
 
 /** React hook: loads data and refreshes whenever anything is saved. */
 export function useLostly() {
-  const [data, setData] = useState<{ places: Place[]; history: CheckRecord[]; log: LogEntry[] } | null>(null);
+  const [data, setData] = useState<{ places: Place[]; history: CheckRecord[]; log: LogEntry[]; left: LeftBehind[] } | null>(null);
   useEffect(() => {
-    const load = async () => setData({ places: await getPlaces(), history: await getHistory(), log: await getLog() });
+    const load = async () =>
+      setData({ places: await getPlaces(), history: await getHistory(), log: await getLog(), left: await getLeft() });
     load();
     listeners.add(load);
     return () => {

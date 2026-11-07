@@ -10,7 +10,7 @@ export const ITEM_LIBRARY: Omit<Item, 'days'>[] = [
   { id: 'wallet', label: 'Wallet', emoji: '👛' },
   { id: 'phone', label: 'Phone', emoji: '📱' },
   { id: 'watch', label: 'Watch', emoji: '⌚' },
-  { id: 'jacket', label: 'Jacket', emoji: '🧥' },
+  { id: 'jacket', label: 'Jacket', emoji: '🧥', when: 'cold' },
   { id: 'earbuds', label: 'Earbuds', emoji: '🎧' },
   { id: 'charger', label: 'Charger', emoji: '🔌' },
   { id: 'laptop', label: 'Laptop', emoji: '💻' },
@@ -21,8 +21,8 @@ export const ITEM_LIBRARY: Omit<Item, 'days'>[] = [
   { id: 'id', label: 'ID card', emoji: '🪪' },
   { id: 'homework', label: 'Homework', emoji: '📚' },
   { id: 'gymbag', label: 'Gym bag', emoji: '👟' },
-  { id: 'hat', label: 'Hat', emoji: '🧢' },
-  { id: 'umbrella', label: 'Umbrella', emoji: '☂️' },
+  { id: 'gloves', label: 'Gloves', emoji: '🧤', when: 'cold' },
+  { id: 'umbrella', label: 'Umbrella', emoji: '☂️', when: 'rain' },
   { id: 'meds', label: 'Medicine', emoji: '💊' },
   { id: 'ball', label: 'Ball', emoji: '🏀' },
   { id: 'carkeys', label: 'Car keys', emoji: '🚗' },
@@ -34,7 +34,7 @@ type PlacePreset = { key: string; name: string; emoji: string; items: string[]; 
 
 /** Each preset ships with sensible smart rules, so nudges are quiet from day one. */
 export const PLACE_PRESETS: PlacePreset[] = [
-  { key: 'home', name: 'Home', emoji: '🏠', items: ['keys', 'wallet', 'phone', 'watch', 'jacket'], rules: { minDwellMinutes: 15 }, radiusMeters: 150, note: 'After 15+ min at home' },
+  { key: 'home', name: 'Home', emoji: '🏠', items: ['keys', 'wallet', 'phone', 'watch', 'jacket', 'umbrella'], rules: { minDwellMinutes: 15 }, radiusMeters: 150, note: 'After 15+ min at home' },
   { key: 'school', name: 'School', emoji: '🏫', items: ['backpack', 'phone', 'jacket', 'homework', 'water'], rules: { minDwellMinutes: 30, activeDays: [1, 2, 3, 4, 5], activeHours: { start: 11, end: 18 } }, radiusMeters: 250, note: 'Weekday afternoons' },
   { key: 'gym', name: 'Gym', emoji: '🏋️', items: ['phone', 'keys', 'earbuds', 'water', 'gymbag'], rules: { minDwellMinutes: 20 }, radiusMeters: 150, note: 'After a 20+ min workout' },
   { key: 'work', name: 'Work', emoji: '💼', items: ['laptop', 'charger', 'phone', 'keys', 'id'], rules: { minDwellMinutes: 60, activeDays: [1, 2, 3, 4, 5] }, radiusMeters: 200, note: 'Weekdays, after an hour+' },

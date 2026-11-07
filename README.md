@@ -10,7 +10,14 @@ Idea by Will. Built with Expo (React Native), so one codebase runs on iPhone, An
 - **One-tap places:** "📍 I'm at School now" saves the spot. No maps, no addresses.
 - **Answer from the notification:** "✅ Got everything" right on the nudge, without opening the app.
 - **"Leaving now?" button:** a 3-second manual check that opens the list for the closest place (works on the web too).
-- **Shows its value:** streak of clean days, and a count of things Lostly saved you from leaving behind.
+- **Shows its value:** a streak of days with nothing left behind, and a count of things Lostly caught that you went back and grabbed.
+
+## What makes it valuable
+
+- **Weather-aware items:** the jacket only shows up when it is cold (under 55°F) and the umbrella only when rain is likely (40%+ in the next few hours). The nudge says why ("70% chance of rain: grab your umbrella"). Weather comes from Open-Meteo, free with no key; if it is unavailable, weather items just show as normal.
+- **One-time reminders:** "📝 Remember something for next time" adds a permission slip or library book to the next checklist only. It jumps to the top, gets called out in the nudge, and is important enough to override the day, hour, and stay-length rules. It clears itself after the check.
+- **Left-behind tracker:** if you leave without something, Lostly remembers where it is, shows it on the home screen, and nudges you when you arrive back at that place ("Your wallet is here! Grab it.").
+- **Learns your weak spots:** the items you forget most move to the top and get called out.
 
 ## How the smart nudges work
 
@@ -42,6 +49,7 @@ src/
     rules.ts           the smart nudge brain (pure logic, tested)
     presets.ts         item library and place presets with smart defaults
     stats.ts           streaks and saves
+    weather.ts         Open-Meteo lookup for weather-aware items
     engine.ts          connects location events to the rules
     store.ts           saves data on the device (nothing leaves the phone)
     platform.native.ts phone: background geofencing + notifications

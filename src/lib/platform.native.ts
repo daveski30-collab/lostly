@@ -4,7 +4,7 @@
 import * as Location from 'expo-location';
 import * as Notifications from 'expo-notifications';
 import * as TaskManager from 'expo-task-manager';
-import { handleEnter, handleExit } from './engine';
+import { handleEnter, handleExit, type NotifyMsg } from './engine';
 import { addCheck, markHandled } from './store';
 import { MIN_RADIUS_METERS } from './rules';
 import type { Place } from './types';
@@ -21,7 +21,7 @@ TaskManager.defineTask<{ eventType: Location.GeofencingEventType; region: Locati
   async ({ data, error }) => {
     if (error || !data?.region?.identifier) return;
     const id = data.region.identifier;
-    if (data.eventType === Location.GeofencingEventType.Enter) await handleEnter(id);
+    if (data.eventType === Location.GeofencingEventType.Enter) await handleEnter(id, notify);
     if (data.eventType === Location.GeofencingEventType.Exit) await handleExit(id, notify);
   },
 );
@@ -32,9 +32,9 @@ Notifications.setNotificationCategoryAsync(CATEGORY, [
   { identifier: 'open', buttonTitle: 'Show my list', options: { opensAppToForeground: true } },
 ]).catch(() => {});
 
-/** Handle a tap on a nudge. Returns the place to open, or null if it was handled silently. */
+/** Handle a tap on a nudge. Returns the screen to open, or null if it was handled silently. */
 async function handleResponse(r: Notifications.NotificationResponse): Promise<string | null> {
-  const placeId = r.notification.request.content.data?.placeId;
+  const { placeId, kind } = (r.notification.request.content.data ?? {}) as { placeId?: unknown; kind?: unknown };
   if (typeof placeId !== 'string') return null;
   // Each nudge is handled once (the app may see the same tap again when it relaunches).
   if (!(await markHandled(`${r.notification.request.identifier}:${r.actionIdentifier}`))) return null;
@@ -42,7 +42,7 @@ async function handleResponse(r: Notifications.NotificationResponse): Promise<st
     await addCheck({ placeId, at: Date.now(), missing: [] });
     return null;
   }
-  return placeId;
+  return kind === 'found' ? '/' : `/check/${placeId}`;
 }
 
 // Android runs this when "Got everything" is tapped while the app is closed.
@@ -55,9 +55,15 @@ Notifications.setNotificationHandler({
   handleNotification: async () => ({ shouldShowBanner: true, shouldShowList: true, shouldPlaySound: true, shouldSetBadge: false }),
 });
 
-export async function notify(msg: { title: string; body: string; placeId: string }) {
+export async function notify(msg: NotifyMsg) {
   await Notifications.scheduleNotificationAsync({
-    content: { title: msg.title, body: msg.body, data: { placeId: msg.placeId }, categoryIdentifier: CATEGORY },
+    content: {
+      title: msg.title,
+      body: msg.body,
+      data: { placeId: msg.placeId, kind: msg.kind },
+      // Only "leaving" nudges get the quick-answer buttons.
+      ...(msg.kind === 'leave' ? { categoryIdentifier: CATEGORY } : {}),
+    },
     trigger: null, // right now
   });
 }
@@ -101,7 +107,7 @@ export async function syncGeofences(places: Place[]) {
 }
 
 /** When the user taps a nudge, open that place's checklist (or record "Got everything" silently). */
-export function onNudgeTapped(open: (placeId: string) => void) {
+export function onNudgeTapped(open: (path: string) => void) {
   const last = Notifications.getLastNotificationResponse();
   if (last) handleResponse(last).then((id) => id && open(id));
   const sub = Notifications.addNotificationResponseReceivedListener((r) => {

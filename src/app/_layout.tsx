@@ -9,7 +9,7 @@ export default function RootLayout() {
   useEffect(() => {
     // Keep the phone's watched places in sync each time the app opens.
     getPlaces().then(syncGeofences).catch(() => {});
-    return onNudgeTapped((placeId) => router.push(`/check/${placeId}`));
+    return onNudgeTapped((path) => router.push(path as never));
   }, []);
 
   return (

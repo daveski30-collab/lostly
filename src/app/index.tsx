@@ -1,13 +1,13 @@
 import * as Location from 'expo-location';
 import { Redirect, router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Button, C, Card, SectionTitle } from '../components/ui';
 import { handleEnter, handleExit } from '../lib/engine';
 import { enableNudges, notify, nudgesEnabled, supportsBackgroundNudges, syncGeofences } from '../lib/platform';
 import { distanceMeters } from '../lib/rules';
 import { computeStats } from '../lib/stats';
-import { getPlaces, isOnboarded, setOnboarded, upsertPlace, useLostly } from '../lib/store';
+import { addOneTime, getPlaces, isOnboarded, removeOneTime, resolveLeft, setOnboarded, upsertPlace, useLostly } from '../lib/store';
 import type { Place } from '../lib/types';
 
 const DAY = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -35,6 +35,8 @@ export default function Home() {
   const [banner, setBanner] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [testing, setTesting] = useState<string | null>(null);
+  const [noteFor, setNoteFor] = useState<string | null>(null);
+  const [note, setNote] = useState('');
 
   useEffect(() => {
     nudgesEnabled().then(setEnabled);
@@ -94,12 +96,25 @@ export default function Home() {
   // Test the rules without walking anywhere.
   const tryLeaving = async (p: Place, stayedMinutes: number) => {
     const now = new Date();
-    await handleEnter(p.id, new Date(now.getTime() - stayedMinutes * 60_000));
+    await handleEnter(p.id, undefined, new Date(now.getTime() - stayedMinutes * 60_000));
     const d = await handleExit(p.id, supportsBackgroundNudges ? notify : async () => {}, now);
     if (d.nudge) {
       if (!supportsBackgroundNudges) router.push(`/check/${p.id}`);
       else setBanner('Nudge sent. Check your notifications.');
     } else setBanner(`Lostly stayed quiet: ${d.reason}.`);
+  };
+
+  // Simulate arriving, to see the "your stuff is here" reminder.
+  const tryArriving = async (p: Place) => {
+    const here = data.left.filter((l) => l.placeId === p.id);
+    await handleEnter(p.id, supportsBackgroundNudges ? notify : undefined);
+    setBanner(here.length ? `Arriving at ${p.name}: "Your ${here.map((l) => l.label.toLowerCase()).join(', ')} ${here.length === 1 ? 'is' : 'are'} here! Grab it."` : `Arrived at ${p.name}. Nothing left behind here.`);
+  };
+
+  const saveNote = async (placeId: string) => {
+    await addOneTime(placeId, note);
+    setNote('');
+    setNoteFor(null);
   };
 
   const nameOf = (id: string) => data.places.find((p) => p.id === id)?.name ?? 'A place';
@@ -124,6 +139,27 @@ export default function Home() {
           <Stat big={`✅ ${stats.checks}`} label="checks" />
         </View>
       ) : null}
+
+      {data.left.length > 0 && (
+        <Card style={st.leftCard}>
+          <Text style={st.leftTitle}>📍 Left behind</Text>
+          {data.left.map((l) => (
+            <View key={l.id} style={st.leftRow}>
+              <Text style={st.leftEmoji}>{l.emoji}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={st.leftLabel}>{l.label}</Text>
+                <Text style={st.placeMeta}>
+                  At {nameOf(l.placeId)} · {new Date(l.at).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' })}
+                </Text>
+              </View>
+              <Pressable onPress={() => resolveLeft(l.id)} style={st.gotBack} accessibilityRole="button" accessibilityLabel={`Got ${l.label} back`}>
+                <Text style={st.gotBackText}>Got it ✓</Text>
+              </Pressable>
+            </View>
+          ))}
+          <Text style={st.placeMeta}>{supportsBackgroundNudges ? 'Lostly will remind you when you get back there.' : 'On the phone, Lostly reminds you when you get back there.'}</Text>
+        </Card>
+      )}
 
       <Card style={enabled ? { backgroundColor: C.greenSoft, borderColor: C.greenSoft } : undefined}>
         {supportsBackgroundNudges ? (
@@ -153,6 +189,29 @@ export default function Home() {
             <Text style={st.chev}>›</Text>
           </Pressable>
           <Text style={st.items}>{p.items.map((i) => i.emoji).join('  ')}</Text>
+          {(p.extras ?? []).map((x) => (
+            <View key={x.id} style={st.onceRow}>
+              <Text style={st.onceText}>📝 Next time: {x.label}</Text>
+              <Pressable onPress={() => removeOneTime(p.id, x.id)} accessibilityLabel={`Remove ${x.label}`}>
+                <Text style={st.onceX}>✕</Text>
+              </Pressable>
+            </View>
+          ))}
+          {noteFor === p.id ? (
+            <View style={st.noteRow}>
+              <TextInput
+                style={st.noteInput}
+                value={note}
+                onChangeText={setNote}
+                placeholder="e.g. Permission slip, library book"
+                autoFocus
+                onSubmitEditing={() => saveNote(p.id)}
+                returnKeyType="done"
+                accessibilityLabel={`One-time item for ${p.name}`}
+              />
+              <Button label="Add" onPress={() => saveNote(p.id)} />
+            </View>
+          ) : null}
           {!p.location && (
             <Button kind="secondary" label={busy === p.id ? 'Saving…' : `📍 I'm at ${p.name} now`} onPress={() => saveHere(p)} disabled={busy === p.id} />
           )}
@@ -160,11 +219,19 @@ export default function Home() {
             <View style={st.tryRow}>
               <Button kind="ghost" label="Left after 1 hr" onPress={() => tryLeaving(p, 60)} />
               <Button kind="ghost" label="Quick drive-by" onPress={() => tryLeaving(p, 1)} />
+              <Button kind="ghost" label="Arrive" onPress={() => tryArriving(p)} />
             </View>
           ) : (
-            <Pressable onPress={() => setTesting(p.id)}>
-              <Text style={st.testLink}>Test the smart rules</Text>
-            </Pressable>
+            <View style={st.links}>
+              {noteFor !== p.id && (
+                <Pressable onPress={() => { setNoteFor(p.id); setNote(''); }} accessibilityRole="button">
+                  <Text style={st.addOnce}>📝 Remember something for next time</Text>
+                </Pressable>
+              )}
+              <Pressable onPress={() => setTesting(p.id)}>
+                <Text style={st.testLink}>Test the rules</Text>
+              </Pressable>
+            </View>
           )}
         </Card>
       ))}
@@ -216,5 +283,19 @@ const st = StyleSheet.create({
   items: { fontSize: 22, letterSpacing: 2 },
   tryRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
   testLink: { color: C.muted, fontSize: 13, fontWeight: '600', textDecorationLine: 'underline' },
+  leftCard: { backgroundColor: '#FFF1EC', borderColor: '#FFD3C2' },
+  leftTitle: { fontSize: 16, fontWeight: '900', color: C.accent },
+  leftRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  leftEmoji: { fontSize: 28 },
+  leftLabel: { fontSize: 16, fontWeight: '800', color: C.ink },
+  gotBack: { backgroundColor: C.greenSoft, borderRadius: 999, paddingVertical: 8, paddingHorizontal: 12 },
+  gotBackText: { color: C.green, fontWeight: '800', fontSize: 13 },
+  onceRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF8DB', borderRadius: 10, paddingVertical: 6, paddingHorizontal: 10 },
+  onceText: { flex: 1, fontSize: 14, fontWeight: '700', color: C.ink },
+  onceX: { color: C.muted, fontSize: 15, paddingHorizontal: 4 },
+  noteRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
+  noteInput: { flex: 1, minWidth: 0, borderWidth: 1, borderColor: C.line, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, fontSize: 15, backgroundColor: '#fff', color: C.ink },
+  links: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
+  addOnce: { color: C.accent, fontSize: 14, fontWeight: '700' },
   log: { fontSize: 13, color: C.ink, lineHeight: 19 },
 });

@@ -5,6 +5,8 @@ import { Button, C } from '../../components/ui';
 import { smartChecklist } from '../../lib/rules';
 import { addCheck, useLostly } from '../../lib/store';
 
+const close = () => (router.canGoBack() ? router.back() : router.replace('/'));
+
 export default function Checklist() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const data = useLostly();
@@ -19,14 +21,15 @@ export default function Checklist() {
 
   const toggle = (itemId: string) => {
     const next = new Set(have);
-    next.has(itemId) ? next.delete(itemId) : next.add(itemId);
+    if (next.has(itemId)) next.delete(itemId);
+    else next.add(itemId);
     setHave(next);
   };
 
   const finish = async (all: boolean) => {
     const miss = all ? [] : list.filter((i) => !have.has(i.id)).map((i) => i.id);
     await addCheck({ placeId: place.id, at: Date.now(), missing: miss });
-    if (miss.length === 0) router.back();
+    if (miss.length === 0) close();
     else setMissing(miss);
   };
 
@@ -40,7 +43,7 @@ export default function Checklist() {
           <Text key={i.id} style={st.grab}>{i.emoji} {i.label}</Text>
         ))}
         <Text style={st.sub}>Lostly will remember and put these at the top next time.</Text>
-        <Button label="Got them, thanks" onPress={() => router.back()} />
+        <Button label="Got them, thanks" onPress={close} />
       </View>
     );
   }

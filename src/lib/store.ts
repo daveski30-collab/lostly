@@ -3,34 +3,13 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
-import { DEFAULT_RULES } from './rules';
 import type { CheckRecord, Place, VisitState } from './types';
 
-const KEYS = { places: 'lostly.places', visit: 'lostly.visit', history: 'lostly.history', log: 'lostly.log' };
+const KEYS = { places: 'lostly.places', visit: 'lostly.visit', history: 'lostly.history', log: 'lostly.log', onboarded: 'lostly.onboarded' };
 
 export type LogEntry = { at: number; placeId: string; text: string };
 
-export const newId = () => Math.random().toString(36).slice(2, 10);
-
-export function starterPlaces(): Place[] {
-  return [
-    {
-      id: newId(),
-      name: 'Home',
-      emoji: '🏠',
-      location: null,
-      radiusMeters: 150,
-      items: [
-        { id: newId(), label: 'Keys', emoji: '🔑' },
-        { id: newId(), label: 'Wallet', emoji: '👛' },
-        { id: newId(), label: 'Phone', emoji: '📱' },
-        { id: newId(), label: 'Watch', emoji: '⌚' },
-        { id: newId(), label: 'Jacket', emoji: '🧥' },
-      ],
-      rules: { ...DEFAULT_RULES, minDwellMinutes: 15 },
-    },
-  ];
-}
+export { newId } from './ids';
 
 async function read<T>(key: string, fallback: T): Promise<T> {
   try {
@@ -48,18 +27,8 @@ async function write(key: string, value: unknown) {
 
 const listeners = new Set<() => void>();
 
-let seeding: Promise<Place[]> | null = null;
-
 export async function getPlaces(): Promise<Place[]> {
-  const raw = await AsyncStorage.getItem(KEYS.places);
-  if (raw !== null) return JSON.parse(raw);
-  // First launch: create the starter places exactly once, even if two screens ask at the same time.
-  seeding ??= (async () => {
-    const seed = starterPlaces();
-    await write(KEYS.places, seed);
-    return seed;
-  })();
-  return seeding;
+  return read<Place[]>(KEYS.places, []);
 }
 export const savePlaces = (p: Place[]) => write(KEYS.places, p);
 
@@ -90,6 +59,17 @@ export async function addCheck(rec: CheckRecord) {
 export const getLog = () => read<LogEntry[]>(KEYS.log, []);
 export async function addLog(entry: LogEntry) {
   await write(KEYS.log, [entry, ...(await getLog())].slice(0, 30));
+}
+
+export const isOnboarded = () => read<boolean>(KEYS.onboarded, false);
+export const setOnboarded = () => write(KEYS.onboarded, true);
+
+/** Notification ids already handled, so a tapped action is never counted twice. */
+export async function markHandled(id: string): Promise<boolean> {
+  const seen = await read<string[]>('lostly.handled', []);
+  if (seen.includes(id)) return false;
+  await AsyncStorage.setItem('lostly.handled', JSON.stringify([...seen, id].slice(-50)));
+  return true;
 }
 
 /** React hook: loads data and refreshes whenever anything is saved. */

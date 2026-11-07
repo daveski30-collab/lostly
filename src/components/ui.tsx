@@ -98,6 +98,23 @@ export function Toggle({ label, value, onChange, hint }: { label: string; value:
   );
 }
 
+/** A tappable emoji tile used for picking items and places. */
+export function Chip({ emoji, label, on, onPress, sub }: { emoji: string; label: string; on: boolean; onPress: () => void; sub?: string }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={[s.chip, on && s.chipOn]}
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked: on }}
+      accessibilityLabel={label}
+    >
+      <Text style={s.chipEmoji}>{emoji}</Text>
+      <Text style={[s.chipLabel, on && { color: C.accent }]} numberOfLines={1}>{label}</Text>
+      {sub ? <Text style={s.chipSub} numberOfLines={2}>{sub}</Text> : null}
+    </Pressable>
+  );
+}
+
 export function SectionTitle({ children }: { children: ReactNode }) {
   return <Text style={s.section}>{children}</Text>;
 }
@@ -127,5 +144,11 @@ export const s = StyleSheet.create({
   dayText: { fontWeight: '700', color: C.ink },
   track: { width: 44, height: 26, borderRadius: 13, backgroundColor: '#D9D4CC', padding: 3 },
   knob: { width: 20, height: 20, borderRadius: 10, backgroundColor: '#fff' },
+  chip: { width: '31%', flexGrow: 1, minWidth: 92, alignItems: 'center', paddingVertical: 12, paddingHorizontal: 6, borderRadius: 16, borderWidth: 2, borderColor: C.line, backgroundColor: '#fff', gap: 2 },
+  chipOn: { borderColor: C.accent, backgroundColor: C.accentSoft },
+  chipEmoji: { fontSize: 28 },
+  chipLabel: { fontSize: 13, fontWeight: '700', color: C.ink },
+  chipSub: { fontSize: 11, color: C.muted, textAlign: 'center' },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   section: { fontSize: 13, fontWeight: '800', color: C.muted, letterSpacing: 0.8, textTransform: 'uppercase', marginTop: 8 },
 });

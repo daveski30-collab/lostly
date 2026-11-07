@@ -2,7 +2,8 @@ import * as Location from 'expo-location';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { Button, C, Card, DayPicker, SectionTitle, Stepper, Toggle } from '../../components/ui';
+import { Button, C, Card, Chip, DayPicker, SectionTitle, Stepper, Toggle, s as ui } from '../../components/ui';
+import { ITEM_LIBRARY, PLACE_PRESETS, placeFromPreset } from '../../lib/presets';
 import { syncGeofences } from '../../lib/platform';
 import { DEFAULT_RULES, MIN_RADIUS_METERS } from '../../lib/rules';
 import { deletePlace, getPlaces, newId, upsertPlace } from '../../lib/store';
@@ -70,9 +71,24 @@ export default function EditPlace() {
 
   const r = place.rules;
 
+  const onList = new Set(place.items.map((i) => i.id));
+  const suggestions = ITEM_LIBRARY.filter((i) => !onList.has(i.id));
+
   return (
     <ScrollView contentContainerStyle={st.page} keyboardShouldPersistTaps="handled">
       <Stack.Screen options={{ title: isNew ? 'New place' : place.name }} />
+
+      {isNew && !place.name && (
+        <>
+          <SectionTitle>Start from a preset</SectionTitle>
+          <View style={ui.grid}>
+            {PLACE_PRESETS.map((p) => (
+              <Chip key={p.key} emoji={p.emoji} label={p.name} sub={p.note} on={false} onPress={() => setPlace({ ...placeFromPreset(p.key), id: place.id, location: place.location })} />
+            ))}
+          </View>
+          <Text style={st.hint}>Or fill it in yourself below.</Text>
+        </>
+      )}
 
       <Card>
         <View style={st.nameRow}>
@@ -110,9 +126,21 @@ export default function EditPlace() {
             )}
           </View>
         ))}
+        {suggestions.length > 0 && (
+          <>
+            <Text style={st.hint}>Tap to add:</Text>
+            <View style={st.suggest}>
+              {suggestions.map((i) => (
+                <Pressable key={i.id} style={st.pill} onPress={() => set({ items: [...place.items, { ...i }] })} accessibilityLabel={`Add ${i.label}`}>
+                  <Text style={st.pillText}>{i.emoji} {i.label}</Text>
+                </Pressable>
+              ))}
+            </View>
+          </>
+        )}
         <View style={st.nameRow}>
           <TextInput style={[st.input, st.emojiInput]} value={newEmoji} onChangeText={setNewEmoji} placeholder="🎒" maxLength={4} accessibilityLabel="New item emoji" />
-          <TextInput style={[st.input, { flex: 1 }]} value={newItem} onChangeText={setNewItem} placeholder="Add an item" onSubmitEditing={addItem} returnKeyType="done" accessibilityLabel="New item name" />
+          <TextInput style={[st.input, { flex: 1 }]} value={newItem} onChangeText={setNewItem} placeholder="Something else…" onSubmitEditing={addItem} returnKeyType="done" accessibilityLabel="New item name" />
         </View>
         <Button kind="ghost" label="+ Add item" onPress={addItem} />
       </Card>
@@ -157,5 +185,8 @@ const st = StyleSheet.create({
   itemEmoji: { fontSize: 22, width: 30, textAlign: 'center' },
   itemLabel: { flex: 1, fontSize: 16, color: C.ink },
   link: { color: C.accent, fontWeight: '600', fontSize: 13 },
+  suggest: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  pill: { borderRadius: 999, borderWidth: 1, borderColor: C.line, paddingVertical: 6, paddingHorizontal: 10, backgroundColor: '#fff' },
+  pillText: { fontSize: 13, color: C.ink, fontWeight: '600' },
   remove: { color: C.muted, fontSize: 16, paddingHorizontal: 6 },
 });

@@ -4,6 +4,14 @@
 
 Idea by Will. Built with Expo (React Native), so one codebase runs on iPhone, Android, and the web.
 
+## What makes it frictionless
+
+- **Setup is all taps:** pick your stuff, pick your places, done. Every place preset (Home, School, Gym, Work, Practice, Friend's house) comes with sensible smart rules.
+- **One-tap places:** "📍 I'm at School now" saves the spot. No maps, no addresses.
+- **Answer from the notification:** "✅ Got everything" right on the nudge, without opening the app.
+- **"Leaving now?" button:** a 3-second manual check that opens the list for the closest place (works on the web too).
+- **Shows its value:** streak of clean days, and a count of things Lostly saved you from leaving behind.
+
 ## How the smart nudges work
 
 Every rule is a reason *not* to bother you. If none apply, you get a nudge.
@@ -26,11 +34,14 @@ All of this lives in [`src/lib/rules.ts`](src/lib/rules.ts) with tests in [`src/
 ```
 src/
   app/                 screens (Expo Router: each file is a screen)
-    index.tsx          home: your places, "Try leaving", activity log
+    welcome.tsx        first-run setup (taps only)
+    index.tsx          home: Leaving now?, stats, places, activity log
     place/[id].tsx     add/edit a place, checklist, and rules
     check/[id].tsx     the "Got everything?" checklist
   lib/
     rules.ts           the smart nudge brain (pure logic, tested)
+    presets.ts         item library and place presets with smart defaults
+    stats.ts           streaks and saves
     engine.ts          connects location events to the rules
     store.ts           saves data on the device (nothing leaves the phone)
     platform.native.ts phone: background geofencing + notifications

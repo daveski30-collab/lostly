@@ -5,22 +5,51 @@ import * as Location from 'expo-location';
 import * as Notifications from 'expo-notifications';
 import * as TaskManager from 'expo-task-manager';
 import { handleEnter, handleExit } from './engine';
+import { addCheck, markHandled } from './store';
 import { MIN_RADIUS_METERS } from './rules';
 import type { Place } from './types';
 
 export const GEOFENCE_TASK = 'lostly-geofence';
+const NOTIFICATION_TASK = 'lostly-notification-action';
+const CATEGORY = 'lostly-leave';
+const ALL_GOOD = 'all_good';
 export const supportsBackgroundNudges = true;
 
 // Must be defined at the top level so the phone can wake the app in the background.
-TaskManager.defineTask<{ eventType: Location.LocationGeofencingEventType; region: Location.LocationRegion }>(
+TaskManager.defineTask<{ eventType: Location.GeofencingEventType; region: Location.LocationRegion }>(
   GEOFENCE_TASK,
   async ({ data, error }) => {
     if (error || !data?.region?.identifier) return;
     const id = data.region.identifier;
-    if (data.eventType === Location.LocationGeofencingEventType.Enter) await handleEnter(id);
-    if (data.eventType === Location.LocationGeofencingEventType.Exit) await handleExit(id, notify);
+    if (data.eventType === Location.GeofencingEventType.Enter) await handleEnter(id);
+    if (data.eventType === Location.GeofencingEventType.Exit) await handleExit(id, notify);
   },
 );
+
+// Buttons right on the notification: confirm without even opening the app.
+Notifications.setNotificationCategoryAsync(CATEGORY, [
+  { identifier: ALL_GOOD, buttonTitle: '✅ Got everything', options: { opensAppToForeground: false } },
+  { identifier: 'open', buttonTitle: 'Show my list', options: { opensAppToForeground: true } },
+]).catch(() => {});
+
+/** Handle a tap on a nudge. Returns the place to open, or null if it was handled silently. */
+async function handleResponse(r: Notifications.NotificationResponse): Promise<string | null> {
+  const placeId = r.notification.request.content.data?.placeId;
+  if (typeof placeId !== 'string') return null;
+  // Each nudge is handled once (the app may see the same tap again when it relaunches).
+  if (!(await markHandled(`${r.notification.request.identifier}:${r.actionIdentifier}`))) return null;
+  if (r.actionIdentifier === ALL_GOOD) {
+    await addCheck({ placeId, at: Date.now(), missing: [] });
+    return null;
+  }
+  return placeId;
+}
+
+// Android runs this when "Got everything" is tapped while the app is closed.
+TaskManager.defineTask<Notifications.NotificationTaskPayload>(NOTIFICATION_TASK, async ({ data }) => {
+  if (data && 'actionIdentifier' in data) await handleResponse(data as unknown as Notifications.NotificationResponse);
+});
+Notifications.registerTaskAsync(NOTIFICATION_TASK).catch(() => {});
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({ shouldShowBanner: true, shouldShowList: true, shouldPlaySound: true, shouldSetBadge: false }),
@@ -28,7 +57,7 @@ Notifications.setNotificationHandler({
 
 export async function notify(msg: { title: string; body: string; placeId: string }) {
   await Notifications.scheduleNotificationAsync({
-    content: { title: msg.title, body: msg.body, data: { placeId: msg.placeId } },
+    content: { title: msg.title, body: msg.body, data: { placeId: msg.placeId }, categoryIdentifier: CATEGORY },
     trigger: null, // right now
   });
 }
@@ -71,14 +100,12 @@ export async function syncGeofences(places: Place[]) {
   await Location.startGeofencingAsync(GEOFENCE_TASK, regions);
 }
 
-/** When the user taps a nudge, open that place's checklist. */
+/** When the user taps a nudge, open that place's checklist (or record "Got everything" silently). */
 export function onNudgeTapped(open: (placeId: string) => void) {
   const last = Notifications.getLastNotificationResponse();
-  const lastId = last?.notification.request.content.data?.placeId;
-  if (typeof lastId === 'string') open(lastId);
+  if (last) handleResponse(last).then((id) => id && open(id));
   const sub = Notifications.addNotificationResponseReceivedListener((r) => {
-    const id = r.notification.request.content.data?.placeId;
-    if (typeof id === 'string') open(id);
+    handleResponse(r).then((id) => id && open(id));
   });
   return () => sub.remove();
 }

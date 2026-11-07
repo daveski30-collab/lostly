@@ -6,7 +6,7 @@ Idea by Will. Built with Expo (React Native), so one codebase runs on iPhone, An
 
 ## What makes it frictionless
 
-- **Setup is all taps:** pick your stuff, pick your places, done. Every place preset (Home, School, Gym, Work, Practice, Friend's house) comes with sensible smart rules.
+- **Setup is all taps:** pick your stuff, pick your places, done. Every place preset (Home, School, Gym, Work, Practice, Friends) comes with sensible smart rules.
 - **One-tap places:** "📍 I'm at School now" saves the spot. No maps, no addresses.
 - **Answer from the notification:** "✅ Got everything" right on the nudge, without opening the app.
 - **"Leaving now?" button:** a 3-second manual check that opens the list for the closest place (works on the web too).

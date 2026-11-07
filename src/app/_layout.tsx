@@ -4,6 +4,7 @@ import {
   BricolageGrotesque_800ExtraBold,
   useFonts,
 } from '@expo-google-fonts/bricolage-grotesque';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Stack, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
@@ -13,7 +14,7 @@ import { onNudgeTapped, syncGeofences } from '../lib/platform';
 import { getPlaces } from '../lib/store';
 
 export default function RootLayout() {
-  const [fontsLoaded, fontError] = useFonts({ BricolageGrotesque_600SemiBold, BricolageGrotesque_700Bold, BricolageGrotesque_800ExtraBold });
+  const [fontsLoaded, fontError] = useFonts({ ...Ionicons.font, BricolageGrotesque_600SemiBold, BricolageGrotesque_700Bold, BricolageGrotesque_800ExtraBold });
 
   useEffect(() => {
     // Keep the phone's watched places in sync each time the app opens.

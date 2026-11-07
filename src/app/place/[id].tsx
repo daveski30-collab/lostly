@@ -2,6 +2,7 @@ import * as Location from 'expo-location';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Icon, ItemGlyph, PLACE_ICONS } from '../../components/icons';
 import { Button, C, Card, Chip, DayPicker, SectionTitle, Stepper, Toggle, s as ui } from '../../components/ui';
 import { ITEM_LIBRARY, PLACE_PRESETS, placeFromPreset } from '../../lib/presets';
 import { syncGeofences } from '../../lib/platform';
@@ -83,7 +84,7 @@ export default function EditPlace() {
           <SectionTitle>Start from a preset</SectionTitle>
           <View style={ui.grid}>
             {PLACE_PRESETS.map((p) => (
-              <Chip key={p.key} emoji={p.emoji} label={p.name} sub={p.note} on={false} onPress={() => setPlace({ ...placeFromPreset(p.key), id: place.id, location: place.location })} />
+              <Chip key={p.key} glyph={(c) => <Icon name={PLACE_ICONS[p.key] ?? 'location-outline'} size={28} color={c} />} label={p.name} sub={p.note} on={false} onPress={() => setPlace({ ...placeFromPreset(p.key), id: place.id, location: place.location })} />
             ))}
           </View>
           <Text style={st.hint}>Or fill it in yourself below.</Text>
@@ -95,7 +96,7 @@ export default function EditPlace() {
           <TextInput style={[st.input, st.emojiInput]} value={place.emoji} onChangeText={(v) => set({ emoji: v })} maxLength={4} accessibilityLabel="Place emoji" />
           <TextInput style={[st.input, { flex: 1 }]} value={place.name} onChangeText={(v) => set({ name: v })} placeholder="Name (Home, School, Gym…)" placeholderTextColor={C.muted} accessibilityLabel="Place name" />
         </View>
-        <Button kind="secondary" label={place.location ? '📍 Update to where I am now' : '📍 Set to where I am now'} onPress={useHere} />
+        <Button kind="secondary" icon="navigate-outline" label={place.location ? 'Update to where I am now' : 'Set to where I am now'} onPress={useHere} />
         {place.location ? (
           <Text style={st.hint}>Saved at {place.location.latitude.toFixed(5)}, {place.location.longitude.toFixed(5)}</Text>
         ) : null}
@@ -109,15 +110,18 @@ export default function EditPlace() {
         {place.items.map((it) => (
           <View key={it.id}>
             <View style={st.itemRow}>
-              <Text style={st.itemEmoji}>{it.emoji}</Text>
+              <View style={st.itemIcon}>
+                <ItemGlyph item={it} size={19} color={C.ink} />
+              </View>
               <Text style={st.itemLabel}>{it.label}</Text>
               <Pressable onPress={() => setOpenDaysFor(openDaysFor === it.id ? null : it.id)}>
-                <Text style={st.link}>
-                  {[it.days?.length ? `${it.days.length} days` : 'Every day', it.when === 'cold' ? '🥶' : it.when === 'rain' ? '🌧️' : ''].filter(Boolean).join(' ')}
-                </Text>
+                <View style={st.linkRow}>
+                  {it.when ? <Icon name={it.when === 'rain' ? 'rainy-outline' : 'snow-outline'} size={14} color={C.accent} /> : null}
+                  <Text style={st.link}>{it.days?.length ? `${it.days.length} days` : 'Every day'}</Text>
+                </View>
               </Pressable>
               <Pressable onPress={() => set({ items: place.items.filter((x) => x.id !== it.id) })} accessibilityLabel={`Remove ${it.label}`}>
-                <Text style={st.remove}>✕</Text>
+                <Icon name="close" size={18} color={C.muted} />
               </Pressable>
             </View>
             {openDaysFor === it.id && (
@@ -150,7 +154,8 @@ export default function EditPlace() {
             <View style={st.suggest}>
               {suggestions.map((i) => (
                 <Pressable key={i.id} style={st.pill} onPress={() => set({ items: [...place.items, { ...i }] })} accessibilityLabel={`Add ${i.label}`}>
-                  <Text style={st.pillText}>{i.emoji} {i.label}</Text>
+                  <ItemGlyph item={i} size={14} color={C.muted} />
+                  <Text style={st.pillText}>{i.label}</Text>
                 </Pressable>
               ))}
             </View>
@@ -160,7 +165,7 @@ export default function EditPlace() {
           <TextInput style={[st.input, st.emojiInput]} value={newEmoji} onChangeText={setNewEmoji} placeholder="🎒" placeholderTextColor={C.muted} maxLength={4} accessibilityLabel="New item emoji" />
           <TextInput style={[st.input, { flex: 1 }]} value={newItem} onChangeText={setNewItem} placeholder="Something else…" placeholderTextColor={C.muted} onSubmitEditing={addItem} returnKeyType="done" accessibilityLabel="New item name" />
         </View>
-        <Button kind="ghost" label="+ Add item" onPress={addItem} />
+        <Button kind="secondary" compact icon="add" label="Add item" onPress={addItem} />
       </Card>
 
       <SectionTitle>Smart nudge rules</SectionTitle>
@@ -186,8 +191,8 @@ export default function EditPlace() {
         )}
       </Card>
 
-      <Button label="Save" onPress={save} />
-      {!isNew && <Button kind="danger" label="Delete place" onPress={remove} />}
+      <Button icon="checkmark" label="Save" onPress={save} />
+      {!isNew && <Button kind="danger" icon="trash-outline" label="Delete place" onPress={remove} />}
     </ScrollView>
   );
 }
@@ -200,12 +205,12 @@ const st = StyleSheet.create({
   hint: { fontSize: 13, color: C.muted, lineHeight: 18 },
   label: { fontSize: 15, color: C.ink, fontWeight: '600' },
   itemRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6 },
-  itemEmoji: { fontSize: 22, width: 30, textAlign: 'center' },
+  itemIcon: { width: 34, height: 34, borderRadius: 11, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
+  linkRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   itemLabel: { flex: 1, fontSize: 16, color: C.ink },
   link: { color: C.accent, fontWeight: '600', fontSize: 13 },
   suggest: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  pill: { borderRadius: 999, paddingVertical: 7, paddingHorizontal: 12, backgroundColor: C.card2 },
+  pill: { borderRadius: 999, paddingVertical: 7, paddingHorizontal: 12, backgroundColor: C.card2, flexDirection: 'row', alignItems: 'center', gap: 6 },
   pillOn: { backgroundColor: C.accent, borderColor: C.accent },
   pillText: { fontSize: 13, color: C.ink, fontWeight: '600' },
-  remove: { color: C.muted, fontSize: 16, paddingHorizontal: 6 },
 });

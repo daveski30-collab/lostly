@@ -215,8 +215,8 @@ export async function cleanUp() {
   await purgePlace(TEST_ID);
 }
 
-export const WEATHER_PRESETS: { label: string; w: Weather }[] = [
-  { label: '🥶 Cold + rain', w: COLD_WET },
-  { label: '☀️ Warm + dry', w: WARM },
-  { label: '🌥️ Cool, no rain', w: { tempF: 50, rainChance: 10 } },
+export const WEATHER_PRESETS: { label: string; icon: 'rainy-outline' | 'sunny-outline' | 'partly-sunny-outline'; w: Weather }[] = [
+  { label: 'Cold + rain', icon: 'rainy-outline', w: COLD_WET },
+  { label: 'Warm + dry', icon: 'sunny-outline', w: WARM },
+  { label: 'Cool, no rain', icon: 'partly-sunny-outline', w: { tempF: 50, rainChance: 10 } },
 ];

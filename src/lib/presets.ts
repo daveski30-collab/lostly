@@ -39,7 +39,7 @@ export const PLACE_PRESETS: PlacePreset[] = [
   { key: 'gym', name: 'Gym', emoji: '🏋️', items: ['phone', 'keys', 'earbuds', 'water', 'gymbag'], rules: { minDwellMinutes: 20 }, radiusMeters: 150, note: 'After a 20+ min workout' },
   { key: 'work', name: 'Work', emoji: '💼', items: ['laptop', 'charger', 'phone', 'keys', 'id'], rules: { minDwellMinutes: 60, activeDays: [1, 2, 3, 4, 5] }, radiusMeters: 200, note: 'Weekdays, after an hour+' },
   { key: 'practice', name: 'Practice', emoji: '🏀', items: ['ball', 'water', 'jacket', 'phone'], rules: { minDwellMinutes: 30 }, radiusMeters: 200, note: 'After 30+ min' },
-  { key: 'friend', name: "Friend's house", emoji: '🛋️', items: ['phone', 'charger', 'jacket', 'keys'], rules: { minDwellMinutes: 30 }, radiusMeters: 150, note: 'After 30+ min' },
+  { key: 'friend', name: 'Friends', emoji: '🛋️', items: ['phone', 'charger', 'jacket', 'keys'], rules: { minDwellMinutes: 30 }, radiusMeters: 150, note: 'After 30+ min' },
 ];
 
 export function placeFromPreset(key: string, location: Place['location'] = null): Place {

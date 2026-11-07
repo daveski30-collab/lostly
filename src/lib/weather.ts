@@ -49,6 +49,14 @@ export async function getWeather(loc: { latitude: number; longitude: number } | 
 }
 
 export function weatherLine(w: Weather): string {
-  const icon = w.rainChance >= 60 ? '🌧️' : w.rainChance >= 30 ? '🌦️' : w.tempF < 40 ? '🥶' : w.tempF < 55 ? '🌥️' : '☀️';
-  return `${icon} ${Math.round(w.tempF)}°F · ${w.rainChance}% rain in the next few hours`;
+  return `${Math.round(w.tempF)}°F now, ${w.rainChance}% chance of rain soon`;
+}
+
+/** Ionicons name for the conditions. */
+export function weatherIcon(w: Weather): 'rainy-outline' | 'snow-outline' | 'partly-sunny-outline' | 'sunny-outline' | 'cloudy-outline' {
+  if (w.rainChance >= 50) return 'rainy-outline';
+  if (w.tempF < 40) return 'snow-outline';
+  if (w.rainChance >= 25) return 'cloudy-outline';
+  if (w.tempF < 55) return 'partly-sunny-outline';
+  return 'sunny-outline';
 }

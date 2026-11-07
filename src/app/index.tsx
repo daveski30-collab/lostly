@@ -2,7 +2,9 @@ import * as Location from 'expo-location';
 import { Redirect, router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { Bouncy, Button, C, Card, F, SectionTitle } from '../components/ui';
+import { Icon, ItemGlyph, PlaceGlyph } from '../components/icons';
+import { Bouncy, Button, C, Card, F, IconButton, SectionTitle } from '../components/ui';
+import { ITEM_LIBRARY } from '../lib/presets';
 import { isTestPlace } from '../lib/testlab';
 import { handleEnter, handleExit } from '../lib/engine';
 import { enableNudges, notify, nudgesEnabled, supportsBackgroundNudges, syncGeofences } from '../lib/platform';
@@ -10,6 +12,8 @@ import { distanceMeters } from '../lib/rules';
 import { computeStats } from '../lib/stats';
 import { addOneTime, getPlaces, isOnboarded, removeOneTime, resolveLeft, setOnboarded, upsertPlace, useLostly } from '../lib/store';
 import type { Place } from '../lib/types';
+
+const ITEM_ID_BY_LABEL: Record<string, string> = Object.fromEntries(ITEM_LIBRARY.map((i) => [i.label, i.id]));
 
 const DAY = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -125,9 +129,7 @@ export default function Home() {
     <ScrollView contentContainerStyle={st.page}>
       <View style={st.top}>
         <Text style={st.wordmark}>lostly</Text>
-        <Pressable onPress={() => router.push('/test')} style={st.labPill} accessibilityRole="button" accessibilityLabel="Open test lab">
-          <Text style={st.labText}>🧪 Test lab</Text>
-        </Pressable>
+        <IconButton name="flask-outline" label="Open test lab" onPress={() => router.push('/test')} />
       </View>
 
       {places.length > 0 && (
@@ -136,10 +138,12 @@ export default function Home() {
           <View style={st.leaveFoot}>
             <Text style={st.leaveSub}>3-second check of your stuff</Text>
             <View style={st.leaveGo}>
-              <Text style={st.leaveGoText}>Go</Text>
+              <Icon name="arrow-forward" size={24} color={C.accent} />
             </View>
           </View>
-          <Text style={st.leaveEmoji}>🔑</Text>
+          <View style={st.leaveMark} pointerEvents="none">
+            <Icon name="key" size={150} color={C.onAccent} />
+          </View>
         </Bouncy>
       )}
 
@@ -158,7 +162,9 @@ export default function Home() {
           <Text style={st.leftTitle}>Left behind</Text>
           {data.left.map((l) => (
             <View key={l.id} style={st.leftRow}>
-              <Text style={st.leftEmoji}>{l.emoji}</Text>
+              <View style={st.leftIcon}>
+                <ItemGlyph item={{ id: l.itemId ?? ITEM_ID_BY_LABEL[l.label] ?? 'x', emoji: l.emoji }} size={22} color={C.coral} />
+              </View>
               <View style={{ flex: 1 }}>
                 <Text style={st.leftLabel}>{l.label}</Text>
                 <Text style={st.placeMeta}>
@@ -196,24 +202,25 @@ export default function Home() {
         <Card key={p.id}>
           <Pressable onPress={() => router.push(`/place/${p.id}`)} style={st.placeHead} accessibilityRole="button" accessibilityLabel={`Edit ${p.name}`}>
             <View style={st.placeBadge}>
-              <Text style={st.placeEmoji}>{p.emoji}</Text>
+              <PlaceGlyph place={p} size={24} color={C.accent} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={st.placeName}>{p.name}</Text>
               <Text style={st.placeMeta}>{p.location ? ruleSummary(p) : 'Not saved yet'}</Text>
             </View>
-            <Text style={st.chev}>›</Text>
+            <Icon name="chevron-forward" size={20} color={C.muted} />
           </Pressable>
           <View style={st.itemRow}>
             {p.items.map((i) => (
               <View key={i.id} style={st.itemBubble}>
-                <Text style={st.itemEmoji}>{i.emoji}</Text>
+                <ItemGlyph item={i} size={17} color={C.ink} />
               </View>
             ))}
           </View>
           {(p.extras ?? []).map((x) => (
             <View key={x.id} style={st.onceRow}>
-              <Text style={st.onceText}>📝 Next time: {x.label}</Text>
+              <Icon name="create-outline" size={16} color={C.accent} />
+              <Text style={st.onceText}>Next time: {x.label}</Text>
               <Pressable onPress={() => removeOneTime(p.id, x.id)} accessibilityLabel={`Remove ${x.label}`}>
                 <Text style={st.onceX}>✕</Text>
               </Pressable>
@@ -232,17 +239,17 @@ export default function Home() {
                 returnKeyType="done"
                 accessibilityLabel={`One-time item for ${p.name}`}
               />
-              <Button label="Add" onPress={() => saveNote(p.id)} />
+              <Button compact label="Add" onPress={() => saveNote(p.id)} />
             </View>
           ) : null}
           {!p.location && (
-            <Button kind="secondary" label={busy === p.id ? 'Saving…' : `📍 I'm at ${p.name} now`} onPress={() => saveHere(p)} disabled={busy === p.id} />
+            <Button kind="secondary" icon="navigate-outline" label={busy === p.id ? 'Saving…' : `I'm at ${p.name} now`} onPress={() => saveHere(p)} disabled={busy === p.id} />
           )}
           {testing === p.id ? (
             <View style={st.tryRow}>
-              <Button kind="ghost" label="Left after 1 hr" onPress={() => tryLeaving(p, 60)} />
-              <Button kind="ghost" label="Drive-by" onPress={() => tryLeaving(p, 1)} />
-              <Button kind="ghost" label="Arrive" onPress={() => tryArriving(p)} />
+              <Button compact kind="secondary" icon="walk-outline" label="Left after 1 hr" onPress={() => tryLeaving(p, 60)} />
+              <Button compact kind="secondary" icon="car-outline" label="Drive-by" onPress={() => tryLeaving(p, 1)} />
+              <Button compact kind="secondary" icon="enter-outline" label="Arrive" onPress={() => tryArriving(p)} />
             </View>
           ) : (
             <View style={st.links}>
@@ -254,7 +261,10 @@ export default function Home() {
                   }}
                   accessibilityRole="button"
                 >
-                  <Text style={st.addOnce}>+ Something for next time</Text>
+                  <View style={st.addOnceRow}>
+                    <Icon name="add" size={18} color={C.accent} />
+                    <Text style={st.addOnce}>Something for next time</Text>
+                  </View>
                 </Pressable>
               )}
               <Pressable onPress={() => setTesting(p.id)}>
@@ -264,7 +274,7 @@ export default function Home() {
           )}
         </Card>
       ))}
-      <Button kind="ghost" label="+ Add a place" onPress={() => router.push('/place/new')} />
+      <Button kind="secondary" icon="add" label="Add a place" onPress={() => router.push('/place/new')} />
 
       {data.log.filter((l) => !isTestPlace({ id: l.placeId })).length > 0 && (
         <>
@@ -301,15 +311,12 @@ const st = StyleSheet.create({
   page: { padding: 16, paddingTop: 20, gap: 12, maxWidth: 560, width: '100%', alignSelf: 'center', paddingBottom: 56 },
   top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 8, paddingBottom: 4 },
   wordmark: { fontFamily: F.heavy, fontSize: 30, color: C.ink, letterSpacing: -1 },
-  labPill: { backgroundColor: C.card, borderRadius: 999, paddingVertical: 8, paddingHorizontal: 12 },
-  labText: { color: C.muted, fontFamily: F.semi, fontSize: 13 },
   leave: { backgroundColor: C.accent, borderRadius: 32, padding: 22, minHeight: 190, justifyContent: 'space-between', overflow: 'hidden' },
   leaveTitle: { fontFamily: F.heavy, fontSize: 52, lineHeight: 52, color: C.onAccent, letterSpacing: -2 },
   leaveFoot: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 18 },
   leaveSub: { fontSize: 15, color: C.onAccent, opacity: 0.75, fontWeight: '600', flex: 1 },
-  leaveGo: { backgroundColor: C.onAccent, borderRadius: 999, paddingVertical: 10, paddingHorizontal: 22 },
-  leaveGoText: { color: C.accent, fontFamily: F.heavy, fontSize: 16 },
-  leaveEmoji: { position: 'absolute', right: -6, top: -4, fontSize: 96, opacity: 0.9, transform: [{ rotate: '-18deg' }] },
+  leaveGo: { backgroundColor: C.onAccent, width: 54, height: 54, borderRadius: 27, alignItems: 'center', justifyContent: 'center' },
+  leaveMark: { position: 'absolute', right: -28, top: -26, opacity: 0.1, transform: [{ rotate: '-35deg' }] },
   stats: { flexDirection: 'row', backgroundColor: C.card, borderRadius: 24, paddingVertical: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
   stat: { flex: 1, alignItems: 'center' },
   statDiv: { width: 1, backgroundColor: C.line, marginVertical: 4 },
@@ -322,30 +329,28 @@ const st = StyleSheet.create({
   turnOnText: { color: C.onAccent, fontFamily: F.bold, fontSize: 13 },
   banner: { fontSize: 14, color: C.ink, backgroundColor: C.card2, padding: 12, borderRadius: 16, overflow: 'hidden', lineHeight: 20 },
   placeHead: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  placeBadge: { width: 48, height: 48, borderRadius: 16, backgroundColor: C.card2, alignItems: 'center', justifyContent: 'center' },
-  placeEmoji: { fontSize: 26 },
+  placeBadge: { width: 48, height: 48, borderRadius: 16, backgroundColor: C.accentSoft, alignItems: 'center', justifyContent: 'center' },
   placeName: { fontSize: 19, fontFamily: F.bold, color: C.ink },
   placeMeta: { fontSize: 13, color: C.muted, marginTop: 2 },
-  chev: { fontSize: 28, color: C.muted },
   itemRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  itemBubble: { width: 38, height: 38, borderRadius: 19, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
-  itemEmoji: { fontSize: 19 },
+  itemBubble: { width: 38, height: 38, borderRadius: 13, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
   tryRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
   testLink: { color: C.muted, fontSize: 13, fontWeight: '600' },
   leftCard: { backgroundColor: C.coralSoft, borderRadius: 24, padding: 16, gap: 10, borderWidth: 1.5, borderColor: C.coral },
   leftTitle: { fontSize: 18, fontFamily: F.heavy, color: C.coral },
   leftRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  leftEmoji: { fontSize: 28 },
+  leftIcon: { width: 40, height: 40, borderRadius: 14, backgroundColor: 'rgba(255,122,107,0.16)', alignItems: 'center', justifyContent: 'center' },
   leftLabel: { fontSize: 16, fontFamily: F.bold, color: C.ink },
   gotBack: { backgroundColor: C.green, borderRadius: 999, paddingVertical: 8, paddingHorizontal: 14 },
   gotBackText: { color: C.onAccent, fontFamily: F.bold, fontSize: 13 },
-  onceRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.accentSoft, borderRadius: 12, paddingVertical: 8, paddingHorizontal: 12 },
+  onceRow: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: C.accentSoft, borderRadius: 12, paddingVertical: 8, paddingHorizontal: 12 },
   onceText: { flex: 1, fontSize: 14, fontWeight: '700', color: C.accent },
   onceX: { color: C.muted, fontSize: 15, paddingHorizontal: 4 },
   noteRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
   noteInput: { flex: 1, minWidth: 0, borderRadius: 999, paddingHorizontal: 16, paddingVertical: 12, fontSize: 15, backgroundColor: C.bg, color: C.ink },
   links: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap', paddingTop: 2 },
   addOnce: { color: C.accent, fontSize: 14, fontFamily: F.semi },
+  addOnceRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   logBox: { gap: 10, paddingHorizontal: 4 },
   logRow: { flexDirection: 'row', gap: 12 },
   logTime: { width: 64, fontSize: 13, color: C.muted },

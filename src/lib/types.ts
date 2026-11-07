@@ -18,7 +18,7 @@ export type Item = {
 export type Weather = { tempF: number; rainChance: number };
 
 /** Something you said you left behind, so Lostly can help you get it back. */
-export type LeftBehind = { id: string; label: string; emoji: string; placeId: string; at: number };
+export type LeftBehind = { id: string; itemId?: string; label: string; emoji: string; placeId: string; at: number };
 
 /**
  * The "smart" part. These rules decide whether leaving a place is worth a nudge,

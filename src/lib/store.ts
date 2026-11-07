@@ -98,7 +98,7 @@ export async function removeOneTime(placeId: string, itemId: string) {
 export const getLeft = () => read<LeftBehind[]>(KEYS.left, []);
 export async function addLeft(placeId: string, items: Item[]) {
   const now = Date.now();
-  const add = items.map((i) => ({ id: newId(), label: i.label, emoji: i.emoji, placeId, at: now }));
+  const add = items.map((i) => ({ id: newId(), itemId: i.id, label: i.label, emoji: i.emoji, placeId, at: now }));
   await write(KEYS.left, [...(await getLeft()), ...add]);
   // Mark them on the latest check here, so stats only count real saves.
   const h = await getHistory();

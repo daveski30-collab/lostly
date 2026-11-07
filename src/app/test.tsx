@@ -3,6 +3,7 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Icon } from '../components/icons';
 import { Button, C, F, SectionTitle, Toggle } from '../components/ui';
 import { notify, supportsBackgroundNudges } from '../lib/platform';
 import { resetAll } from '../lib/store';
@@ -41,7 +42,7 @@ export default function TestLab() {
       {supportsBackgroundNudges && (
         <Toggle label="Send real notifications" hint="See the actual nudges pop up on this phone while the tests run." value={real} onChange={setReal} />
       )}
-      <Button label={running ? 'Running…' : results ? 'Run again' : `Run all ${SCENARIOS.length} tests`} onPress={run} disabled={running} />
+      <Button icon={results ? 'refresh' : 'play'} label={running ? 'Running…' : results ? 'Run again' : `Run all ${SCENARIOS.length} tests`} onPress={run} disabled={running} />
 
       {done && (
         <View style={[st.summary, { backgroundColor: passed === results!.length ? C.greenSoft : C.coralSoft }]}>
@@ -59,7 +60,7 @@ export default function TestLab() {
             return (
               <View key={s.name} style={st.row}>
                 <View style={[st.mark, r && { backgroundColor: r.pass ? C.green : C.coral }]}>
-                  {r ? <Text style={st.markText}>{r.pass ? '✓' : '✕'}</Text> : running ? <ActivityIndicator size="small" color={C.muted} /> : null}
+                  {r ? <Icon name={r.pass ? 'checkmark' : 'close'} size={15} color={C.onAccent} /> : running ? <ActivityIndicator size="small" color={C.muted} /> : null}
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={st.name}>{s.name}</Text>
@@ -77,12 +78,13 @@ export default function TestLab() {
       <View style={st.pills}>
         {WEATHER_PRESETS.map((w, i) => (
           <Pressable key={w.label} onPress={() => setWeatherIdx(i)} style={[st.pill, i === weatherIdx && st.pillOn]} accessibilityRole="radio" accessibilityState={{ selected: i === weatherIdx }}>
+            <Icon name={w.icon} size={16} color={i === weatherIdx ? C.onAccent : C.ink} />
             <Text style={[st.pillText, i === weatherIdx && { color: C.onAccent }]}>{w.label}</Text>
           </Pressable>
         ))}
       </View>
       <Toggle label="Add a one-time item" hint="Adds a permission slip, like a reminder you set the night before." value={oneTime} onChange={setOneTime} />
-      <Button kind="secondary" label="Open the checklist" onPress={handsOn} />
+      <Button kind="secondary" icon="open-outline" label="Open the checklist" onPress={handsOn} />
       <Pressable onPress={cleanUp}>
         <Text style={st.link}>Remove the test spot</Text>
       </Pressable>
@@ -112,12 +114,11 @@ const st = StyleSheet.create({
   list: { backgroundColor: C.card, borderRadius: 24, padding: 16, gap: 16 },
   row: { flexDirection: 'row', gap: 12 },
   mark: { width: 26, height: 26, borderRadius: 13, backgroundColor: C.card2, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
-  markText: { color: C.onAccent, fontWeight: '900', fontSize: 14 },
   name: { fontFamily: F.bold, fontSize: 16, color: C.ink },
   expect: { fontSize: 13, color: C.muted, marginTop: 2 },
   got: { fontSize: 13, color: C.ink, marginTop: 4, lineHeight: 18 },
   pills: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  pill: { backgroundColor: C.card, borderRadius: 999, paddingVertical: 10, paddingHorizontal: 14 },
+  pill: { backgroundColor: C.card, borderRadius: 999, paddingVertical: 10, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 6 },
   pillOn: { backgroundColor: C.accent },
   pillText: { color: C.ink, fontFamily: F.semi, fontSize: 14 },
   link: { color: C.muted, fontSize: 13, fontWeight: '600', textAlign: 'center', paddingVertical: 4 },

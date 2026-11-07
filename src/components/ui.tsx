@@ -4,6 +4,7 @@
 import { useState, type ReactNode } from 'react';
 import { Animated, Platform, Pressable, StyleSheet, Text, View, type PressableProps, type StyleProp, type ViewStyle } from 'react-native';
 import { tick } from '../lib/haptics';
+import { Icon, type IconName } from './icons';
 import type { Weekday } from '../lib/types';
 
 const NATIVE = Platform.OS !== 'web';
@@ -39,7 +40,7 @@ export const C = {
   line: '#353068',
   accent: '#FFD84D', // electric yellow: the one loud thing
   onAccent: '#15122E',
-  accentSoft: 'rgba(255,216,77,0.14)',
+  accentSoft: '#2E2853',
   green: '#5CF2B5', // mint: you have it
   greenSoft: 'rgba(92,242,181,0.14)',
   coral: '#FF7A6B', // left behind
@@ -58,20 +59,44 @@ export function Card({ children, style }: { children: ReactNode; style?: ViewSty
   return <View style={[s.card, style]}>{children}</View>;
 }
 
+const BTN_TEXT: Record<string, string> = { primary: C.onAccent, secondary: C.ink, ghost: C.muted, danger: C.coral };
+
 export function Button({
   label,
   onPress,
   kind = 'primary',
   disabled,
+  icon,
+  compact,
 }: {
   label: string;
   onPress: () => void;
   kind?: 'primary' | 'secondary' | 'ghost' | 'danger';
   disabled?: boolean;
+  icon?: IconName;
+  compact?: boolean;
 }) {
   return (
-    <Bouncy onPress={onPress} disabled={disabled} accessibilityRole="button" accessibilityLabel={label} scaleTo={0.96} style={[s.btn, s[`btn_${kind}`], disabled && { opacity: 0.45 }]}>
-      <Text style={[s.btnText, s[`btnText_${kind}`]]}>{label}</Text>
+    <Bouncy
+      onPress={onPress}
+      disabled={disabled}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      scaleTo={0.97}
+      style={[s.btn, s[`btn_${kind}`], compact && s.btnCompact, disabled && { opacity: 0.4 }]}
+    >
+      {icon ? <Icon name={icon} size={compact ? 16 : 19} color={BTN_TEXT[kind]} /> : null}
+      <Text style={[s.btnText, compact && { fontSize: 14 }, { color: BTN_TEXT[kind] }]}>{label}</Text>
+    </Bouncy>
+  );
+}
+
+/** Round icon-only button for headers and rows. */
+export function IconButton({ name, onPress, label, tone = 'muted' }: { name: IconName; onPress: () => void; label: string; tone?: 'muted' | 'accent' | 'green' }) {
+  const color = tone === 'accent' ? C.accent : tone === 'green' ? C.green : C.muted;
+  return (
+    <Bouncy onPress={onPress} accessibilityRole="button" accessibilityLabel={label} style={s.iconBtn} scaleTo={0.9}>
+      <Icon name={name} size={20} color={color} />
     </Bouncy>
   );
 }
@@ -131,11 +156,16 @@ export function Toggle({ label, value, onChange, hint }: { label: string; value:
   );
 }
 
-/** A tappable emoji tile used for picking items and places. */
-export function Chip({ emoji, label, on, onPress, sub }: { emoji: string; label: string; on: boolean; onPress: () => void; sub?: string }) {
+/** A tappable tile used for picking items and places. */
+export function Chip({ glyph, label, on, onPress, sub }: { glyph: (color: string) => ReactNode; label: string; on: boolean; onPress: () => void; sub?: string }) {
   return (
     <Bouncy onPress={onPress} style={[s.chip, on && s.chipOn]} accessibilityRole="checkbox" accessibilityState={{ checked: on }} accessibilityLabel={label}>
-      <Text style={s.chipEmoji}>{emoji}</Text>
+      {on ? (
+        <View style={s.chipTick}>
+          <Icon name="checkmark" size={12} color={C.onAccent} />
+        </View>
+      ) : null}
+      <View style={{ height: 34, justifyContent: 'center' }}>{glyph(on ? C.accent : C.ink)}</View>
       <Text style={[s.chipLabel, on && { color: C.accent }]} numberOfLines={1}>{label}</Text>
       {sub ? <Text style={s.chipSub} numberOfLines={2}>{sub}</Text> : null}
     </Bouncy>
@@ -148,16 +178,15 @@ export function SectionTitle({ children }: { children: ReactNode }) {
 
 export const s = StyleSheet.create({
   card: { backgroundColor: C.card, borderRadius: 24, padding: 16, gap: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
-  btn: { borderRadius: 999, paddingVertical: 15, paddingHorizontal: 20, alignItems: 'center' },
+  btn: { borderRadius: 18, minHeight: 56, paddingHorizontal: 20, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 },
+  btnCompact: { minHeight: 40, borderRadius: 14, paddingHorizontal: 14 },
+  iconBtn: { width: 42, height: 42, borderRadius: 21, backgroundColor: C.card, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
+  chipTick: { position: 'absolute', top: 8, right: 8, width: 18, height: 18, borderRadius: 9, backgroundColor: C.accent, alignItems: 'center', justifyContent: 'center' },
   btn_primary: { backgroundColor: C.accent },
-  btn_secondary: { backgroundColor: C.accentSoft },
-  btn_ghost: { backgroundColor: 'transparent', borderWidth: 1.5, borderColor: C.line },
+  btn_secondary: { backgroundColor: C.card2 },
+  btn_ghost: { backgroundColor: 'transparent', minHeight: 48 },
   btn_danger: { backgroundColor: C.coralSoft },
-  btnText: { fontSize: 16, fontFamily: F.bold },
-  btnText_primary: { color: C.onAccent },
-  btnText_secondary: { color: C.accent },
-  btnText_ghost: { color: C.ink },
-  btnText_danger: { color: C.coral },
+  btnText: { fontSize: 16, fontFamily: F.bold, letterSpacing: -0.2 },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingVertical: 4 },
   label: { fontSize: 15, color: C.ink, fontWeight: '600' },
   hint: { fontSize: 13, color: C.muted, marginTop: 2, lineHeight: 18 },
@@ -173,7 +202,6 @@ export const s = StyleSheet.create({
   knob: { width: 20, height: 20, borderRadius: 10, backgroundColor: C.muted },
   chip: { flexBasis: '30%', flexGrow: 1, minWidth: 92, alignItems: 'center', paddingVertical: 14, paddingHorizontal: 6, borderRadius: 20, borderWidth: 2, borderColor: 'transparent', backgroundColor: C.card, gap: 3 },
   chipOn: { borderColor: C.accent, backgroundColor: C.accentSoft },
-  chipEmoji: { fontSize: 30 },
   chipLabel: { fontSize: 14, fontFamily: F.bold, color: C.ink },
   chipSub: { fontSize: 11, color: C.muted, textAlign: 'center' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },

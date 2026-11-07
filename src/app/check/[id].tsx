@@ -8,7 +8,8 @@ import { success, warn } from '../../lib/haptics';
 import { allItems, smartChecklist, weatherWants } from '../../lib/rules';
 import { addCheck, addLeft, useLostly } from '../../lib/store';
 import type { Item, Weather } from '../../lib/types';
-import { getWeather, weatherLine } from '../../lib/weather';
+import { getWeather, weatherIcon, weatherLine } from '../../lib/weather';
+import { Icon, ItemGlyph } from '../../components/icons';
 
 const close = () => (router.canGoBack() ? router.back() : router.replace('/'));
 
@@ -86,12 +87,12 @@ export default function Checklist() {
         <View style={st.grabList}>
           {missing.map((i) => (
             <View key={i.id} style={st.grabRow}>
-              <Text style={st.grabEmoji}>{i.emoji}</Text>
+              <ItemGlyph item={i} size={26} color={C.coral} />
               <Text style={st.grab}>{i.label}</Text>
             </View>
           ))}
         </View>
-        <Button label="Got them" onPress={() => { success(); setGood(true); setTimeout(close, 1300); }} />
+        <Button icon="checkmark" label="Got them" onPress={() => { success(); setGood(true); setTimeout(close, 1300); }} />
         <Button kind="ghost" label="Leaving without them" onPress={leaveWithout} />
         <Text style={st.hint}>Leave without them and Lostly remembers where they are, then pings you when you are back at {place.name}.</Text>
       </View>
@@ -105,7 +106,12 @@ export default function Checklist() {
       <Stack.Screen options={{ title: `Leaving ${place.name}` }} />
       <Text style={st.title}>Got everything?</Text>
       <Progress value={list.length ? have.size / list.length : 0} />
-      {weather ? <Text style={st.weather}>{weatherLine(weather)}</Text> : null}
+      {weather ? (
+        <View style={st.weather}>
+          <Icon name={weatherIcon(weather)} size={20} color={C.ink} />
+          <Text style={st.weatherText}>{weatherLine(weather)}</Text>
+        </View>
+      ) : null}
       <View style={st.grid}>
         {list.map((i) => {
           const on = have.has(i.id);
@@ -128,7 +134,7 @@ export default function Checklist() {
               accessibilityLabel={i.label}
               scaleTo={0.93}
             >
-              <Text style={[st.tileEmoji, on && { opacity: 0.55 }]}>{i.emoji}</Text>
+              <ItemGlyph item={i} size={40} color={on ? C.green : i.oneTime ? C.accent : C.ink} />
               <Text style={[st.tileLabel, on && { color: C.green }]} numberOfLines={2}>
                 {i.label}
               </Text>
@@ -138,7 +144,7 @@ export default function Checklist() {
           );
         })}
       </View>
-      {skipped.length > 0 && <Text style={st.hint}>Not needed today: {skipped.map((i) => `${i.emoji} ${i.label}`).join(', ')}</Text>}
+      {skipped.length > 0 && <Text style={st.hint}>Not needed today: {skipped.map((i) => i.label).join(', ')}</Text>}
       <Button label={allOn ? "All set, let's go" : `Done · ${have.size} of ${list.length}`} onPress={() => finish(false)} />
       {!allOn && <Button kind="ghost" label="I have everything" onPress={() => finish(true)} />}
     </ScrollView>
@@ -200,12 +206,12 @@ const st = StyleSheet.create({
   title: { fontSize: 36, lineHeight: 38, fontFamily: F.heavy, color: C.ink, letterSpacing: -1.2 },
   track: { height: 8, borderRadius: 4, backgroundColor: C.card, overflow: 'hidden' },
   fill: { height: 8, borderRadius: 4 },
-  weather: { fontSize: 14, color: C.ink, backgroundColor: C.sky, padding: 12, borderRadius: 16, overflow: 'hidden' },
+  weather: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: C.sky, padding: 12, borderRadius: 16 },
+  weatherText: { flex: 1, fontSize: 14, color: C.ink },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   tile: { flexBasis: '45%', flexGrow: 1, minHeight: 128, backgroundColor: C.card, borderRadius: 28, borderWidth: 2, borderColor: 'rgba(255,255,255,0.06)', alignItems: 'center', justifyContent: 'center', padding: 12, gap: 4 },
   tileOnce: { borderColor: C.accent, backgroundColor: C.accentSoft },
   tileOn: { borderColor: C.green, backgroundColor: C.greenSoft },
-  tileEmoji: { fontSize: 44 },
   tileLabel: { fontSize: 17, fontFamily: F.bold, color: C.ink, textAlign: 'center' },
   badge: { fontSize: 12, fontFamily: F.semi, color: C.coral },
   check: { position: 'absolute', top: 10, right: 10, width: 26, height: 26, borderRadius: 13, backgroundColor: C.green, alignItems: 'center', justifyContent: 'center' },
@@ -214,7 +220,6 @@ const st = StyleSheet.create({
   done: { flex: 1, padding: 24, gap: 12, justifyContent: 'center', maxWidth: 560, width: '100%', alignSelf: 'center' },
   grabList: { gap: 8, marginVertical: 8 },
   grabRow: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: C.coralSoft, borderRadius: 20, paddingVertical: 14, paddingHorizontal: 16, borderWidth: 1.5, borderColor: C.coral },
-  grabEmoji: { fontSize: 30 },
   grab: { fontSize: 22, fontFamily: F.bold, color: C.ink },
   good: { flex: 1, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', gap: 28 },
   goodCircle: { width: 150, height: 150, borderRadius: 75, backgroundColor: C.green, alignItems: 'center', justifyContent: 'center' },
